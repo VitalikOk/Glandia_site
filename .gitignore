@@ -127,7 +127,3 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
-#Доступ
-general/conf/wf.json
-general/conf/gs.json
-general/conf/email.json
