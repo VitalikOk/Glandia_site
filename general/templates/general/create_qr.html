@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>G-LANDIA</title>
+</head>
+<body>
+ <H1>Создать произвольный qr код</H1>
+       <form action="/create_qr_code/" method="post">{% csrf_token %}
+        <h2>Введите данные для QR кода</h2>
+        <input type="text" name="qr_data" size="40">
+           <br><br>
+        <input type="submit" value="Сгенерировать">
+        <br>
+      </form>
+    <div>
+        <img src="{{ qr_img }}"  width="300" alt="My image">
+    </div>
+
+</body>
+</html>
