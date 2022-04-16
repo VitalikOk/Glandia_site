@@ -100,6 +100,12 @@ PREV_MONTH = (datetime.now() - relativedelta(months=1)).strftime("%m")
 YEAR = datetime.now().strftime("%Y")
 
 
+def translit_safe(data, reversed=True):
+    try:
+        return translit(data, reversed)
+    except:
+        return data
+
 def correct_phone_number(p_number):
     return p_number[-10:]
 
@@ -126,7 +132,7 @@ def make_qrcode(row):
         filename = "qr_code_link.png"
     else:
         data = (f"{split_delsps(row['email'])[0]} {row['expire']} "
-                + f"{translit(row['name'], reversed=True)} "
+                + f"{translit_safe(row['name'], reversed=True)} "
                 + f"{correct_phone_number(row['phone'])}"
                 )
         filename = "qr_code.png"

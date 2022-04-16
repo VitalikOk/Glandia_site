@@ -62,7 +62,7 @@ def qr_email_sending(request):
     all_members = mf.get_all_memb_df(all_members)
     log = mf.do_mailing_and_log(all_members, all_members_sheets.sheet1)
     context = {
-        'mailing_log': log
+        'mailing_log': [x + '<br>' for x in log]
     }
     return render(request, "general/qr_email_sending.html", context)
 
@@ -144,7 +144,6 @@ def add_members(request):
             data_memb['print'] = ''
 
             mf.move_files(file_list, mf.new_members_import, mf.new_members_archive, echo=True)
-
             # print(data_memb)
         else:
             print(f'Данные для импорта не найдены')
