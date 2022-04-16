@@ -124,6 +124,8 @@ def add_members(request):
 
 
     def get_exp_date(row):
+        if int(row['full_amount']) < 370:
+            live_time = mf.dt.timedelta(days=31)
         if int(row['full_amount']) < 1999:
             live_time = mf.dt.timedelta(days=182)
         else:

@@ -337,12 +337,13 @@ def move_files(file_list, source, destination, echo=False):
     """
     Перенос csv файлов в архив
     """
-    for file in file_list:
-        sr_file = source + file
-        dest_file = destination + file
-        if echo:
-            print(f"Перемеще {sr_file} -> {dest_file}")
-            os.replace(sr_file, dest_file)
+    if file_list > 0:
+        for file in file_list:
+            sr_file = source + file
+            dest_file = destination + file
+            if echo:
+                print(f"Перемеще {sr_file} -> {dest_file}")
+                os.replace(sr_file, dest_file)
 
 
 def change_cir_lat(in_str):
