@@ -321,7 +321,9 @@ def get_file_list(path, ext='csv', echo=True, recursive=False):
     """
     Получение списка файлов
     """
-    file_list = os.listdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)        
+    file_list = os.listdir(path)    
     for item in file_list:
         if '.' + ext not in item:
             file_list.remove(item)
@@ -337,13 +339,14 @@ def move_files(file_list, source, destination, echo=False):
     """
     Перенос csv файлов в архив
     """
-    if file_list > 0:
-        for file in file_list:
-            sr_file = source + file
-            dest_file = destination + file
-            if echo:
-                print(f"Перемеще {sr_file} -> {dest_file}")
-                os.replace(sr_file, dest_file)
+    if not os.path.exists(destination):
+        os.mkdir(destination)   
+    for file in file_list:
+        sr_file = source + file
+        dest_file = destination + file
+        if echo:
+            print(f"Перемеще {sr_file} -> {dest_file}")
+            os.replace(sr_file, dest_file)
 
 
 def change_cir_lat(in_str):
