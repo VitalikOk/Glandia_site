@@ -24,6 +24,7 @@ from django.conf import settings
 urlpatterns =[
     path("admin/", admin.site.urls),
     path("", general.general),
+    path("menu/", general.menu),
     path("members/", general.members),
     path("create_qr_code/", general.create_qr_code),
     path("add_mem_qrsend/", general.add_mem_qrsend),

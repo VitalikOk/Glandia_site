@@ -31,6 +31,18 @@ def general(request):
     return render(request, "general/index.html", context)
 
 
+def menu(request):
+    with open('general/conf/ac.json') as fm:
+        ac = mf.json.load(fm)
+    context = {
+        'access': 'user'
+    }    
+    if request.method == 'POST':
+        if request.POST['login'] == ac['user'] and request.POST['pwd'] == ac['pwd']:
+            context['access'] = 'loop'
+    return render(request, "general/menu.html", context)
+
+
 def members(request):
     g_sheets = mf.get_google_sheet()
     # Открыывем таблицу
