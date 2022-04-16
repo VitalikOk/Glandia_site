@@ -225,7 +225,8 @@ def do_mailing(mail_list, team=False, to='', sender=SENDER_EMAIL,
                     log.append(log_str)
     # terminate the SMTP session
     server.quit()
-
+    if not os.path.exists(LOG_PATH):
+        os.mkdir(LOG_PATH) 
     with open(LOG_PATH + LOG_FILE_NAME, 'a') as f:
         f.write(str(log) + '\n')
     return mail_list, log
