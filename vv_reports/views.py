@@ -84,7 +84,7 @@ def vvrep_from_gs(file_name, columns, g_sheets):
 
 
 def correct_all_vvcards():
-    g_sheets = mf.gspread.service_account(filename='static/1234.json')
+    g_sheets = mf.get_google_sheet()
     # Открыывем таблицу
     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
     all_members = mf.get_all_memb_df(all_members)
