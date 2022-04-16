@@ -5,7 +5,7 @@ import general.main_func as mf
 def disply_table_html(data, col_name=True):
     result = '<table border="1">'
     if col_name:
-        result += '<tr>'
+        result += '<tr><th>id</th>'
         for n_col in data.columns:
             result += f"<th>{n_col}</th>"
         result += '</tr>'
@@ -105,6 +105,7 @@ def add_members(request):
     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
     all_members = mf.get_all_memb_df(all_members)
 
+
     def get_new_members(file_name):
         """
         Чтение и обработка данных из cvs файла
@@ -121,31 +122,61 @@ def add_members(request):
 
         return data_memb[['date', 'name', 'email', 'full_amount']]
 
+
     def get_exp_date(row):
-        if row['full_amount'] < 1999:
+        if int(row['full_amount']) < 1999:
             live_time = mf.dt.timedelta(days=182)
         else:
             live_time = mf.dt.timedelta(days=365)
         return (row['date'] + live_time).strftime("%m.%Y")
 
+
+    def get_new_memb_ishop(new_memberrs_gs, g_sheets):
+        pays_ishop_sheets, pays_ishop = mf.get_all_values_sheets(new_memberrs_gs, g_sheets)
+        pays_cols = {
+            'date': 'sent',
+            'name': 'Name',
+            'phone': 'Phone',
+            'email': 'Email',
+            'vv_card': 'card',
+            'status': 'Статус оплаты',
+            'full_amount': 'price'
+        }
+        pays_ishop = mf.get_all_memb_df(pays_ishop, dc=pays_cols)
+        pays_ishop = pays_ishop[pays_cols.keys()]
+        pays_ishop['date'] = mf.pd.to_datetime(pays_ishop['date'])
+        pays_ishop['name'] = pays_ishop['name'].apply(lambda x: x.split()[0])
+        pays_ishop['phone'] = pays_ishop['phone'].apply(mf.correct_phone_number)     
+        pays_ishop['vv_card'] = pays_ishop['vv_card'].apply(lambda x: x.replace('Карта', '').strip(' №'))    
+        pays_ishop['expire'] = pays_ishop.apply(get_exp_date, axis=1)
+        pays_ishop['note'] = ''
+        pays_ishop['qrc_status'] = ''
+        pays_ishop['team'] = ''
+        pays_ishop['print'] = ''
+        pays_ishop = pays_ishop.drop(columns=['status','full_amount'])
+        print(pays_ishop)
+        return pays_ishop        
+
+
     def get_new_memb_allfiles(columns):
         # получение списка файлов
         data_memb = mf.pd.DataFrame()
         file_list = mf.get_file_list(mf.new_members_import, ext='csv', echo=True)
-        for file in file_list:
-            data_memb = mf.pd.concat([data_memb,
+
+        if len(file_list) > 0:
+            for file in file_list:
+                data_memb = mf.pd.concat([data_memb,
                                       get_new_members(mf.new_members_import + file)],
                                      ignore_index=True
                                      )
 
-            data_memb = (data_memb.groupby('email')
+                data_memb = (data_memb.groupby('email')
                          .agg({'date': 'last',
                                'name': 'last',
                                'full_amount': 'sum'})
                          .reset_index(drop=False)
                          )
 
-        if len(file_list) > 0:
             data_memb = data_memb[data_memb['full_amount'] >= 1000]
             data_memb['date'] = mf.pd.to_datetime(data_memb['date'])
             data_memb['expire'] = data_memb.apply(get_exp_date, axis=1)
@@ -162,11 +193,21 @@ def add_members(request):
             return mf.pd.DataFrame(columns=columns)
         return data_memb[columns].reset_index(drop=True)
 
+
     memb_columns = ['date', 'name', 'phone', 'email', 'note', 'qrc_status',
                     'team', 'expire', 'print']
 
     data_new_members = get_new_memb_allfiles(memb_columns)
-    data_new_members['date'] = mf.pd.to_datetime(data_new_members['date']).dt.date
+    pays_ishop = get_new_memb_ishop(mf.NEW_MEMB_ISHOP, g_sheets)
+
+    data_new_members = mf.pd.concat([data_new_members,
+                                      pays_ishop],
+                                     ignore_index=True
+                                     )
+    data_new_members['date'] = mf.pd.to_datetime(data_new_members['date']).dt.date                                     
+
+
+
     all_mamb_email = list(all_members[~all_members['email']
                           .isin(['', '-'])]['email']
                           )
@@ -189,25 +230,10 @@ def add_members(request):
             cel_l[ind].value = str(data_new_members.iloc[i][j])
             ind += 1
     all_members_sheets.sheet1.update_cells(cel_l)
-
-    pays_ishop_sheets, pays_ishop = mf.get_all_values_sheets(mf.NEW_MEMB_ISHOP, g_sheets)
-    pays_cols = {
-        'date': 'sent',
-        'name': 'Name',
-        'phone': 'Phone',
-        'email': 'Email',
-        'vv_card': 'Номер_вашей_карты_ВкусВилл',
-        'status': 'Статус оплаты',
-        'price': 'price'
-    }
-    pays_ishop = mf.get_all_memb_df(pays_ishop, dc=pays_cols)
-    pays_ishop = pays_ishop[pays_cols.keys()]
-    pays_ishop['name'] = pays_ishop['name'].apply(lambda x: x.split()[0])
-    print(pays_ishop)
-    print(data_new_members)
+    
     context = {
-        'memb_add_csv': disply_table_html(data_new_members),
-        'memb_add_is': disply_table_html(pays_ishop)
+        'memb_add_is': disply_table_html(pays_ishop),
+        'memb_add_csv': disply_table_html(data_new_members),        
     }
     return render(request, "general/add_members.html", context)
 

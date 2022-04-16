@@ -107,8 +107,9 @@ def translit_safe(data, reversed=True):
         return data
 
 def correct_phone_number(p_number):
+    p_number = re.sub(r"\D", "", p_number)    
     return p_number[-10:]
-
+    
 
 def split_delsps(str_in, div=','):
     return str_in.replace(' ', '').split(div)
