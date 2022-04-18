@@ -159,6 +159,6 @@ def vv_events_visits_report(request):
     else:
         print('Нет данных для добавления в очёт')
     context = {
-        'bonus_count': vv_rep_events['count'].count()
+        'bonus_count': vv_rep_events['count'].sum()
     }
     return render(request, "vv_reports/vv_events_visits_report.html", context)
