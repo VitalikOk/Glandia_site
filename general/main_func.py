@@ -381,3 +381,19 @@ def get_all_members(g_sheets=get_google_sheet()):
     # Открыывем таблицу
     all_members_sheets, all_members = get_all_values_sheets(CLUB_CP_MEMBERS_SHEET, g_sheets)
     return get_all_memb_df(all_members)
+
+
+def disply_table_html(data, col_name=True):
+    result = '<table border="1">'
+    if col_name:
+        result += '<tr><th>id</th>'
+        for n_col in data.columns:
+            result += f"<th>{n_col}</th>"
+        result += '</tr>'
+
+    for ind, row in data.iterrows():
+        result += f'<tr><td>{ind}</td>'
+        for _, cell in row.items():
+            result += f"<td>{cell}</td>"
+        result += '</tr>'
+    return result + '</table>'

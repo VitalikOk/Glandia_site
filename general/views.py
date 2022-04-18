@@ -2,28 +2,6 @@ from django.shortcuts import render
 import general.main_func as mf
 
 
-def disply_table_html(data, col_name=True):
-    result = '<table border="1">'
-    if col_name:
-        result += '<tr><th>id</th>'
-        for n_col in data.columns:
-            result += f"<th>{n_col}</th>"
-        result += '</tr>'
-
-    for ind, row in data.iterrows():
-        result += f'<tr><td>{ind}</td>'
-        for _, cell in row.items():
-            result += f"<td>{cell}</td>"
-        result += '</tr>'
-    return result + '</table>'
-
-    # !mkdir $evet_qr_path
-    # !mkdir $evet_qr_path_archive
-    # !mkdir $new_members_import
-    # !mkdir $new_members_archive
-    # Досуп к аккаунту дял библиатки gspread
-
-
 def general(request):
     context = {
         'hello': 'Hello WORLD BLYT'
@@ -49,7 +27,7 @@ def members(request):
     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
     all_members = mf.get_all_memb_df(all_members)
     context = {
-        'members': disply_table_html(all_members)
+        'members': mf.disply_table_html(all_members)
     }
     return render(request, "general/members.html", context)
 
@@ -234,8 +212,8 @@ def add_members(request):
     all_members_sheets.sheet1.update_cells(cel_l)
     
     context = {
-        'memb_add_is': disply_table_html(pays_ishop),
-        'memb_add_csv': disply_table_html(data_new_members),        
+        'memb_add_is': mf.disply_table_html(pays_ishop),
+        'memb_add_csv': mf.disply_table_html(data_new_members),        
     }
     return render(request, "general/add_members.html", context)
 

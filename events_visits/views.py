@@ -236,7 +236,7 @@ def events_visits_import(request):
                                          report[mf.ev_columns + ['vv_card']]],
                                         ignore_index=True
                                         )
-                print(data_events[data_events['phone'] == 'Номер телефона не указано'])
+                no_members = data_events[data_events['phone'] == 'Номер телефона не указано']
             else:
                 print(f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
                 break
@@ -291,7 +291,8 @@ def events_visits_import(request):
                 ind += 1
         events_log.update_cells(cel_l)
     context = {
-        'message': 'Отчёт о посещениях сформирован'
+        'message': 'Отчёт о посещениях сформирован',
+        'no_members': mf.disply_table_html(no_members),
     }
     return render(request, "events_visits_import.html", context)
 
