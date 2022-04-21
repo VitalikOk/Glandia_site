@@ -76,7 +76,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 # длф работы с датой
 from datetime import datetime
-from datetime import date
+from datetime import date as dt_date
 from dateutil.relativedelta import relativedelta
 import datetime as dt
 from transliterate import translit
@@ -410,4 +410,4 @@ def add_months_for_date(date, m):
         year += month // 12
     if day > num_days[month]:
         day = num_days[month]
-    return date(year, month, day)
+    return dt_date(year, month, day)
