@@ -410,4 +410,4 @@ def add_months_for_date(date, m):
         year += month // 12
     if day > num_days[month]:
         day = num_days[month]
-    return mf.date(year, month, day)
+    return date(year, month, day)
