@@ -76,6 +76,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 # длф работы с датой
 from datetime import datetime
+from datetime import date
 from dateutil.relativedelta import relativedelta
 import datetime as dt
 from transliterate import translit
@@ -397,3 +398,16 @@ def disply_table_html(data, col_name=True):
             result += f"<td>{cell}</td>"
         result += '</tr>'
     return result + '</table>'
+
+
+def add_months_for_date(date, m):
+    num_days=(0,31,28,31,30,31,30,31,31,30,31,30,31)
+    year = date.year
+    month = date.month + m
+    day = date.day
+    if month > 12:
+        month = month % 12
+        year += month // 12
+    if day > num_days[month]:
+        day = num_days[month]
+    return mf.date(year, month, day)

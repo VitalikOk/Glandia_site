@@ -102,13 +102,13 @@ def add_members(request):
 
 
     def get_exp_date(row):
-        if int(row['full_amount']) < 370:
-            live_time = mf.dt.timedelta(days=31)
-        if int(row['full_amount']) < 1999:
-            live_time = mf.dt.timedelta(days=182)
+        if int(row['full_amount']) > 1990:
+            exp_date = mf.add_months_for_date(row['date'], 12)
+        if int(row['full_amount']) > 990:
+            exp_date = mf.add_months_for_date(row['date'], 6)
         else:
-            live_time = mf.dt.timedelta(days=365)
-        return (row['date'] + live_time).strftime("%m.%Y")
+            exp_date = mf.add_months_for_date(row['date'], 1)
+        return exp_date.strftime("%d.%m.%Y")
 
 
     def get_new_memb_ishop(new_memberrs_gs, g_sheets):
@@ -157,7 +157,7 @@ def add_members(request):
                          .reset_index(drop=False)
                          )
 
-            data_memb = data_memb[data_memb['full_amount'] >= 1000]
+            #data_memb = data_memb[data_memb['full_amount'] >= 1000]
             data_memb['date'] = mf.pd.to_datetime(data_memb['date'])
             data_memb['expire'] = data_memb.apply(get_exp_date, axis=1)
             data_memb['phone'] = '!!!'
