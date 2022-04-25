@@ -1,5 +1,6 @@
 from django.shortcuts import render
 import general.main_func as mf
+from general.models import Users, UsersData
 
 
 def general(request):
@@ -31,6 +32,16 @@ def members(request):
     }
     return render(request, "general/members.html", context)
 
+def members2(request):  
+
+    users = Users.objects.all()
+    users_data = UsersData.objects.all()
+    context = {
+        'users' = users,
+        'users_data' = users_data
+    }
+
+    return render(request, "general/members2.html", context)
 
 def create_qr_code(request):
     context = {
