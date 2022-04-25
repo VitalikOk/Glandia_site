@@ -127,3 +127,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+/static/new_members/*.*
+/general/conf/*.*
+/media/qr_code.png
+/media/qr_code_link.png

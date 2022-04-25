@@ -76,6 +76,7 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 # длф работы с датой
 from datetime import datetime
+from datetime import date as dt_date
 from dateutil.relativedelta import relativedelta
 import datetime as dt
 from transliterate import translit
@@ -100,9 +101,16 @@ PREV_MONTH = (datetime.now() - relativedelta(months=1)).strftime("%m")
 YEAR = datetime.now().strftime("%Y")
 
 
-def correct_phone_number(p_number):
-    return p_number[-10:]
+def translit_safe(data, reversed=True):
+    try:
+        return translit(data, reversed)
+    except:
+        return data
 
+def correct_phone_number(p_number):
+    p_number = re.sub(r"\D", "", p_number)    
+    return p_number[-10:]
+    
 
 def split_delsps(str_in, div=','):
     return str_in.replace(' ', '').split(div)
@@ -126,7 +134,7 @@ def make_qrcode(row):
         filename = "qr_code_link.png"
     else:
         data = (f"{split_delsps(row['email'])[0]} {row['expire']} "
-                + f"{translit(row['name'], reversed=True)} "
+                + f"{translit_safe(row['name'], reversed=True)} "
                 + f"{correct_phone_number(row['phone'])}"
                 )
         filename = "qr_code.png"
@@ -218,7 +226,8 @@ def do_mailing(mail_list, team=False, to='', sender=SENDER_EMAIL,
                     log.append(log_str)
     # terminate the SMTP session
     server.quit()
-
+    if not os.path.exists(LOG_PATH):
+        os.mkdir(LOG_PATH) 
     with open(LOG_PATH + LOG_FILE_NAME, 'a') as f:
         f.write(str(log) + '\n')
     return mail_list, log
@@ -314,7 +323,9 @@ def get_file_list(path, ext='csv', echo=True, recursive=False):
     """
     Получение списка файлов
     """
-    file_list = os.listdir(path)
+    if not os.path.exists(path):
+        os.mkdir(path)        
+    file_list = os.listdir(path)    
     for item in file_list:
         if '.' + ext not in item:
             file_list.remove(item)
@@ -330,6 +341,8 @@ def move_files(file_list, source, destination, echo=False):
     """
     Перенос csv файлов в архив
     """
+    if not os.path.exists(destination):
+        os.mkdir(destination)   
     for file in file_list:
         sr_file = source + file
         dest_file = destination + file
@@ -360,6 +373,9 @@ def change_cir_lat(in_str):
             in_str = in_str.replace(lt, ltrs[lt])
     return in_str.upper()
 
+def correct_vv_card(card_n):    
+    return change_cir_lat(card_n.replace('Карта', '').strip(' №'))
+
 
 def get_google_sheet():
     return gspread.service_account(filename='general/conf/gs.json')
@@ -369,3 +385,32 @@ def get_all_members(g_sheets=get_google_sheet()):
     # Открыывем таблицу
     all_members_sheets, all_members = get_all_values_sheets(CLUB_CP_MEMBERS_SHEET, g_sheets)
     return get_all_memb_df(all_members)
+
+
+def disply_table_html(data, col_name=True):
+    result = '<table border="1">'
+    if col_name:
+        result += '<tr><th>id</th>'
+        for n_col in data.columns:
+            result += f"<th>{n_col}</th>"
+        result += '</tr>'
+
+    for ind, row in data.iterrows():
+        result += f'<tr><td>{ind}</td>'
+        for _, cell in row.items():
+            result += f"<td>{cell}</td>"
+        result += '</tr>'
+    return result + '</table>'
+
+
+def add_months_for_date(date, m):
+    num_days=(0,31,28,31,30,31,30,31,31,30,31,30,31)
+    year = date.year
+    month = date.month + m
+    day = date.day
+    if month > 12:
+        month = month % 12
+        year += month // 12
+    if day > num_days[month]:
+        day = num_days[month]
+    return dt_date(year, month, day)

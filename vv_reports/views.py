@@ -84,11 +84,12 @@ def vvrep_from_gs(file_name, columns, g_sheets):
 
 
 def correct_all_vvcards():
-    g_sheets = mf.gspread.service_account(filename='static/1234.json')
+    g_sheets = mf.get_google_sheet()
     # Открыывем таблицу
     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
     all_members = mf.get_all_memb_df(all_members)
-    all_members['vv_card'] = all_members['vv_card'].apply(mf.change_cir_lat)
+    all_members['vv_card'] = all_members['vv_card'].apply(lambda x: mf.change_cir_lat(x) 
+                                                                if x!='' else 'НЕТ КАРТЫ')    
     mf.all_memb_rewrite_column(all_members, 'vv_card', all_members_sheets.sheet1)
 
 
@@ -159,6 +160,6 @@ def vv_events_visits_report(request):
     else:
         print('Нет данных для добавления в очёт')
     context = {
-        'bonus_count': vv_rep_events['count'].count()
+        'bonus_count': vv_rep_events['count'].sum()
     }
     return render(request, "vv_reports/vv_events_visits_report.html", context)
