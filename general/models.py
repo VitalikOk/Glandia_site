@@ -6,9 +6,14 @@ class Users(models.Model):
     phone = models.BigIntegerField(verbose_name="номер телефона", unique=True, default=' - ')
     elmail = models.EmailField(verbose_name="элетронная почта", unique=True)
     note = models.TextField(verbose_name="заметка", blank=True)
-    is_sended = models.BooleanField(verbose_name="отправлено")
-    expire = models.DateField(verbose_name="дата истечения")
-    vvcard = models.IntegerField(verbose_name="номер карты ВВ", default="НЕТ КАРТЫ")
+    gid = models.CharField(verbose_name = "идентификатор", max_length=64, unique=True, default=None)
+    
 
     def __str__(self):
         return self.name
+
+class UsersData(models.Model):
+    user = models.ForeignKey(Users, on_delete=models.CASCADE)
+    is_sended = models.BooleanField(verbose_name="отправлено")
+    expire = models.DateField(verbose_name="дата истечения")
+    vvcard = models.IntegerField(verbose_name="номер карты ВВ", default="НЕТ КАРТЫ")
