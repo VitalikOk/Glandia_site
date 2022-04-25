@@ -127,7 +127,7 @@ def add_members(request):
         pays_ishop['date'] = mf.pd.to_datetime(pays_ishop['date'])
         pays_ishop['name'] = pays_ishop['name'].apply(lambda x: x.split()[0])
         pays_ishop['phone'] = pays_ishop['phone'].apply(mf.correct_phone_number)     
-        pays_ishop['vv_card'] = pays_ishop['vv_card'].apply(lambda x: x.replace('Карта', '').strip(' №') 
+        pays_ishop['vv_card'] = pays_ishop['vv_card'].apply(lambda x: mf.correct_vv_card(x) 
                                                                 if x!='' else 'НЕТ КАРТЫ')    
         pays_ishop['expire'] = pays_ishop.apply(get_exp_date, axis=1)
         pays_ishop['note'] = ''

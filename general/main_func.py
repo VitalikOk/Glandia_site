@@ -373,6 +373,9 @@ def change_cir_lat(in_str):
             in_str = in_str.replace(lt, ltrs[lt])
     return in_str.upper()
 
+def correct_vv_card(card_n):    
+    return change_cir_lat(card_n.replace('Карта', '').strip(' №'))
+
 
 def get_google_sheet():
     return gspread.service_account(filename='general/conf/gs.json')
