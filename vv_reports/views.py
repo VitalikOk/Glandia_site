@@ -88,7 +88,8 @@ def correct_all_vvcards():
     # Открыывем таблицу
     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
     all_members = mf.get_all_memb_df(all_members)
-    all_members['vv_card'] = all_members['vv_card'].apply(mf.change_cir_lat)
+    all_members['vv_card'] = all_members['vv_card'].apply(lambda x: mf.change_cir_lat(x) 
+                                                                if x!='' else 'НЕТ КАРТЫ')    
     mf.all_memb_rewrite_column(all_members, 'vv_card', all_members_sheets.sheet1)
 
 
