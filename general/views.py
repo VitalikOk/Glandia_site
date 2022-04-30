@@ -37,8 +37,8 @@ def members2(request):
     users = Users.objects.all()
     users_data = UsersData.objects.all()
     context = {
-        'users' = users,
-        'users_data' = users_data
+        'users': users,
+        'users_data': users_data
     }
 
     return render(request, "general/members2.html", context)
