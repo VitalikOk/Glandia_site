@@ -7,12 +7,23 @@
 <body>   
  <H1>Участники клуба</H1>
     <div>        
-        {% for user in users %}
+        <!-- {% for user in users %}
             <div class="userfield">
                 <p>Имя: {{user.name}}</p>
                 <p>Дата вступления: {{user.date_in}}</p>
                 <p></p>
             </div>
+        {% endfor %} -->
+        <table>
+            {% for user in users %}
+                
+                <tr>
+                    <td>
+                        user.name
+                    </td>
+                </tr>
+
+
         {% endfor %}
     </div>    
 </body>

@@ -1,6 +1,6 @@
 from django.shortcuts import render
 import general.main_func as mf
-from general.models import Users, UsersData
+from general.models import Users, Contacts
 
 
 def general(request):
@@ -35,10 +35,10 @@ def members(request):
 def members2(request):  
 
     users = Users.objects.all()
-    users_data = UsersData.objects.all()
+    contacts = Contacts.objects.all()
     context = {
         'users': users,
-        'users_data': users_data
+        'users_data': contacts
     }
 
     return render(request, "general/members2.html", context)
