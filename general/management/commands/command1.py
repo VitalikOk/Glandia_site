@@ -485,14 +485,14 @@ class Command(BaseCommand):
                 # print('-')
                 current_date = '-'
            
-            print(current_date)
+            # print(current_date)
         
             # curret_date = date(expd[-1], expd[-2], expd[-3]) if len(expd) == 3 else date(expd[-1], expd[-2], 15)
             
             role = get_role(member)
             # gid = get_gid(member)
 
-            user, created = Users.objects.get_or_create(                
+            user, _ = Users.objects.get_or_create(                
                 role = role,    
                 date_in = member[0],
                 is_sended = True if member[5] == 'ДА' else False,
@@ -501,7 +501,7 @@ class Command(BaseCommand):
                 vvcard = member[9]
             )   
 
-            contact, _ = Contacts.objects.get_or_create(                
+            contact, created = Contacts.objects.get_or_create(                
                 user = user,
                 name = member[1],
                 phone = member[2],
@@ -510,15 +510,20 @@ class Command(BaseCommand):
 
             if created:
                 self.stdout.write(self.style.SUCCESS(
-                        f'Пользователь "{user.vvcard}" добавлен'))
+                        f'Пользователь "{contact.name}" добавлен'))
             else:
                  self.stdout.write(self.style.SUCCESS(
-                        f'Пользователь "{user.vvcard}" уже существует'))
+                        f'Пользователь "{contact.name}" уже существует'))
+
+        '''
+        # это для дозаписи gid в зависимости от роли и id, после заполнения таблиц данными. 
+        # WIP. (сейчас не работает) Хотя похоже надо всё-таки на лету роль добавлять.
 
         for user in Users.objects.all():
             gid1 = get_gid(user)
             # user.gid.add(gid1)
             user.update(gid=gid1)
+        '''
 
             
         # gid = gimmegid((Users.objects.last()).id)
