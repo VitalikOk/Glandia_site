@@ -453,34 +453,73 @@ class Command(BaseCommand):
 
         '''
 
+        
+
+
+        def get_role(member):
+            input_role = member[6]
+            if input_role == '':
+                return Role.MEMBER
+            elif input_role == 'Сотрудник':
+                return Role.WORKER
+            elif input_role == 'волонтер':
+                return Role.VOLUNTEER
+            else:
+                return ''
+
+        def get_gid(user):
+            if user.role == Role.MEMBER:
+                first_dgigit = '1'
+            else:
+                first_dgigit = '0'
+
+            return first_dgigit + '0'*(4 - len(str(user.id))) + str(user.id)
+
         for member in all_members[1:]:
             
             if member[7][-1].isdigit():
-                # print(member)
+                # print(member[7])
                 expd = list(map(int, member[7].split('.'))) #if member != '-' else '-'  #'12.2022' YYYY-MM-DD
                 current_date = date(expd[-1], expd[-2], expd[-3] if len(expd) == 3 else 15)
             else:
+                # print('-')
                 current_date = '-'
            
+            print(current_date)
         
             # curret_date = date(expd[-1], expd[-2], expd[-3]) if len(expd) == 3 else date(expd[-1], expd[-2], 15)
             
-            
-            user = Users.objects.get_or_create(
-                role = Role.MEMBER if member[6] == 'Свои' else member[6],         
+            role = get_role(member)
+            # gid = get_gid(member)
+
+            user, created = Users.objects.get_or_create(                
+                role = role,    
                 date_in = member[0],
                 is_sended = True if member[5] == 'ДА' else False,
                 note = member[4],
                 expire = current_date,
-                vvcard = member[8]
+                vvcard = member[9]
             )   
 
-            Contacts.objects.get_or_create(
-                user = Users.objects.last(),
+            contact, _ = Contacts.objects.get_or_create(                
+                user = user,
                 name = member[1],
                 phone = member[2],
                 elmail = member[3]                
-            )  
+            )           
+
+            if created:
+                self.stdout.write(self.style.SUCCESS(
+                        f'Пользователь "{user.vvcard}" добавлен'))
+            else:
+                 self.stdout.write(self.style.SUCCESS(
+                        f'Пользователь "{user.vvcard}" уже существует'))
+
+        for user in Users.objects.all():
+            gid1 = get_gid(user)
+            # user.gid.add(gid1)
+            user.update(gid=gid1)
+
             
         # gid = gimmegid((Users.objects.last()).id)
 

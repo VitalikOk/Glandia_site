@@ -20,5 +20,5 @@ class Contacts(models.Model):
     elmail = models.EmailField(verbose_name="элетронная почта")    
     
 
-    def __str__(self):
-        return f'Это {self.name}, нумерЪ {self.gid}.'
+    # def __str__(self):
+    #     return f'Это {self.name}, нумерЪ {self.gid}.'
