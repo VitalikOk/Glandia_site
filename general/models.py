@@ -21,8 +21,4 @@ class Contacts(models.Model):
     gid = models.IntegerField(verbose_name = "идентификатор", unique=True, null=True)
     name = models.CharField(verbose_name="имя", max_length=64)    
     phone = models.CharField(verbose_name="номер телефона", max_length=64, default=' - ')
-    elmail = models.EmailField(verbose_name="элетронная почта")    
-    
-
-    def __str__(self):
-        return f'GID!!!!!! {self.gid}'
+    elmail = models.EmailField(verbose_name="элетронная почта")      
