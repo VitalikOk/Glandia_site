@@ -13,11 +13,11 @@ class Command(BaseCommand):
         all_members = mf.get_all_memb_df(all_members)
 
         VIP_DICT = {
-            '9811404242': 'G1',
-            '4795067525': 'G2',
-            '9619796433': 'G3',
-            '9139758064': 'G73',
-            '9162251765': 'G101'
+            '9811404242': 1,
+            '4795067525': 2,
+            '9619796433': 3,
+            '9139758064': 73,
+            '9162251765': 101
         }
 
         vip = all_members[all_members['phone'].isin(VIP_DICT.keys())]
@@ -26,7 +26,7 @@ class Command(BaseCommand):
 
         def next_gid():
 
-            last_gid = Users.objects.all().order_by('gid').last().gid.lstrip('G')
+            last_gid = Users.objects.all().order_by('gid').last().gid
              
             # user_obj = Users.objects.all().order_by('gid').last()            
             
@@ -35,10 +35,10 @@ class Command(BaseCommand):
                 if max_gid < 101:
                     max_gid = 101
                 if max_gid % 100 == 0:
-                    return f'G{max_gid + 2}'
-                return f'G{max_gid + 1}'
+                    return max_gid + 2
+                return max_gid + 1
             else:
-                return 'G103'
+                return 102
 
         def add_user(member):
 
