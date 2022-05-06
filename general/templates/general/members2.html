@@ -30,7 +30,7 @@
                     
                     <tr> 
                         <td>{{user.gid}}</td>
-                        <td>{{user.role}}</td>
+                        <td>{{user.role_id}}</td>
                         <td>{{user.date_in}}</td>
                         <td>{{user.is_sended}}</td>
                         <td>{{user.note}}</td>
@@ -43,7 +43,8 @@
 
 
             <table border="1">
-                <tr>                
+                <tr>
+                    <th>GID</th>                
                     <th>Имя</th>
                     <th>Телефон</th>
                     <th>Электронная почта</th>
@@ -53,12 +54,14 @@
                 {% for contact in contacts %}
                     
                     <tr> 
+                        <td>{{contact.gid}}</td>
                         <td>{{contact.name}}</td>
                         <td>{{contact.phone}}</td>
                         <td>{{contact.elmail}}</td>            
-                    </tr>
+                    </tr>                   
                 
                 {% endfor %}
+                
             </table>
         </div>
     </div>    

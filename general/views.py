@@ -3,6 +3,7 @@ import general.main_func as mf
 from general.models import Users, Contacts
 
 
+
 def general(request):
     context = {
         'hello': 'Hello WORLD BLYT'
@@ -34,7 +35,7 @@ def members(request):
 
 def members2(request):  
 
-    users = Users.objects.all()
+    users = Users.objects.all()    
     contacts = Contacts.objects.all()
     context = {
         'users': users,
