@@ -22,3 +22,6 @@ class Contacts(models.Model):
     name = models.CharField(verbose_name="имя", max_length=64)    
     phone = models.CharField(verbose_name="номер телефона", max_length=64, default=' - ')
     elmail = models.EmailField(verbose_name="элетронная почта")      
+
+
+# test comment
