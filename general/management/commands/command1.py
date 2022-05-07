@@ -26,17 +26,16 @@ class Command(BaseCommand):
 
         def next_gid():
 
-            last_gid = Users.objects.all().order_by('gid').last().gid
-             
-            # user_obj = Users.objects.all().order_by('gid').last()            
+            last_gid = Users.objects.all().order_by('gid').last().gid                                 
             
             if last_gid is not None:
                 max_gid = int(last_gid)
                 if max_gid < 101:
-                    max_gid = 101
+                    return 101
+                max_gid += 1    
                 if max_gid % 100 == 0:
-                    return max_gid + 2
-                return max_gid + 1
+                    return max_gid + 1
+                return max_gid
             else:
                 return 102
 
@@ -97,6 +96,3 @@ class Command(BaseCommand):
         
         for ind, member in not_vip.iterrows():
             add_user(member)
-            
-           
-       
