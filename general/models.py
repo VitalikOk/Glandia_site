@@ -10,7 +10,7 @@ class Users(models.Model):
     gid = models.IntegerField(verbose_name = "идентификатор", unique=True, null=True)
     role = models.ForeignKey(Roles, on_delete=models.CASCADE)
     # role = models.CharField(verbose_name = 'роль', max_length=64, default=Role.MEMBER)
-    date_in = models.DateField(verbose_name="дата добавления", auto_now=True)
+    date_in = models.DateField(verbose_name="дата добавления")
     is_sended = models.BooleanField(verbose_name="отправлено", null=True)
     note = models.TextField(verbose_name="заметка", blank=True)
     expire = models.CharField(verbose_name="дата истечения", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
@@ -24,4 +24,9 @@ class Contacts(models.Model):
     elmail = models.EmailField(verbose_name="элетронная почта")      
 
 
-# test comment
+class EventsVisits(models.Model):
+    date_time = models.DateTimeField(verbose_name="дата посещения")
+    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
+    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
+    note = models.TextField(verbose_name="заметка", blank=True)    
+    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
