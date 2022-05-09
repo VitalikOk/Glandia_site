@@ -180,7 +180,7 @@ def add_members(request):
             data_memb['print'] = ''
 
             mf.move_files(file_list, mf.new_members_import, mf.new_members_archive, echo=True)
-            # print(data_memb)
+
         else:
             print(f'Данные для импорта не найдены')
             return mf.pd.DataFrame(columns=columns)
