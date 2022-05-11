@@ -1,6 +1,6 @@
 from enum import Enum
 
-ROLES = ('Участник', 'Волонтёр', 'Сотрудник')
+ROLES = ('Сотрудник', 'Волонтёр', 'Участник')
 
 class Role(Enum):
     MEMBER = ROLES[0]  

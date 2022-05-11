@@ -16,6 +16,7 @@ class Users(models.Model):
     expire = models.CharField(verbose_name="дата истечения", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
     vvcard = models.CharField(verbose_name="номер карты ВВ", max_length=64, default="НЕТ КАРТЫ")
 
+
 class Contacts(models.Model):
     user = models.ForeignKey(Users, on_delete=models.CASCADE)    
     gid = models.IntegerField(verbose_name = "идентификатор", unique=True, null=True)
@@ -30,3 +31,11 @@ class EventsVisits(models.Model):
     expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
     note = models.TextField(verbose_name="заметка", blank=True)    
     vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
+
+
+class SentReportsVV(models.Model):
+    date = models.DateField(verbose_name="дата отправки")
+    memb_count = models.IntegerField(verbose_name = "количество разных участников", null=True)
+    bonus_count = models.IntegerField(verbose_name = "количество начислений", null=True)
+    bonus_rate = models.IntegerField(verbose_name = "количество бонусов за посещение", null=True)
+    report_type = models.CharField(verbose_name="тип отчёта event|subscrip", max_length=64, default="event")

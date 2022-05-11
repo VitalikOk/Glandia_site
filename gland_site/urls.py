@@ -26,7 +26,6 @@ urlpatterns =[
     path("", general.general),
     path("menu/", general.menu),
     path("members/", general.members),
-    path("members2/", general.members2),
     path("create_qr_code/", general.create_qr_code),
     path("add_mem_qrsend/", general.add_mem_qrsend),
     path("qr_email_sending/", general.qr_email_sending),

@@ -1,7 +1,8 @@
 from django.shortcuts import render
 import general.main_func as mf
+import general.db_func as dbf
 from general.models import Users, Contacts
-
+from general.enums import ROLES
 
 
 def general(request):
@@ -23,26 +24,33 @@ def menu(request):
     return render(request, "general/menu.html", context)
 
 
-def members(request):
-    g_sheets = mf.get_google_sheet()
-    # Открыывем таблицу
-    all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
-    all_members = mf.get_all_memb_df(all_members)
-    context = {
-        'members': mf.disply_table_html(all_members)
+# def members(request):
+#     g_sheets = mf.get_google_sheet()
+#     # Открыывем таблицу
+#     all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
+#     all_members = mf.get_all_memb_df(all_members)
+#     context = {
+#         'members': mf.disply_table_html(all_members)
+#     }
+#     return render(request, "general/members.html", context)
+
+def members(request):  
+    columns = {
+        'gid': 'G-id',
+        'date_in': 'Дата вступления',
+        'is_sended': 'Отправлен QR',
+        'note': 'Примечание',
+        'expire': 'Годен до',
+        'vvcard': 'Каота ВВ',
+        'role_id': 'Роль',
     }
+    # contacts = Contacts.objects.all()
+    context = {
+        'members': mf.disply_table_dj_html(Users.objects.all(), dc=columns)
+        # 'contacts': contacts
+    }
+
     return render(request, "general/members.html", context)
-
-def members2(request):  
-
-    users = Users.objects.all()    
-    contacts = Contacts.objects.all()
-    context = {
-        'users': users,
-        'contacts': contacts
-    }
-
-    return render(request, "general/members2.html", context)
 
 def create_qr_code(request):
     context = {
@@ -57,12 +65,26 @@ def add_mem_qrsend(request):
     return render(request, "general/add_mem_qrsend.html")
 
 
-def qr_email_sending(request):
-    g_sheets = mf.get_google_sheet()
+def qr_email_sending(request):    
     # Открыывем таблицу
-    all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
-    all_members = mf.get_all_memb_df(all_members)
-    log = mf.do_mailing_and_log(all_members, all_members_sheets.sheet1)
+    mailing_list = []
+    q_set = list(Contacts.objects.select_related('user')
+                         .filter(user__is_sended=False)
+                         .exclude(elmail__in=('', '-'))
+                         .values_list('gid', 'elmail', 'phone', 'name', 'user__role', 'user__is_sended', 'user__expire')
+                         )
+
+    dc = [
+        'gid', 'email', 'phone', 'name', 'team', 'sended', 'expire'        
+    ]
+
+    for memb_email in q_set:
+        mailing_list.append(list(memb_email))        
+        mailing_list[-1][-3] = ROLES[mailing_list[-1][-3]-1]
+
+    mailing_list = mf.pd.DataFrame(mailing_list, columns=dc)
+
+    log = mf.do_mailing_and_log_db(mailing_list)
     context = {
         'mailing_log': [x + '<br>' for x in log]
     }
@@ -70,6 +92,7 @@ def qr_email_sending(request):
 
 
 def add_members(request):
+    
     NEW_MEMBERS_COLUMNS = {
         'id': 'id',
         'name': 'Имя донора',
@@ -88,12 +111,6 @@ def add_members(request):
         'email_sub': 'Email подписки',
         'comment': 'Комментарий'
     }
-
-    data_new_members = mf.pd.DataFrame()
-    g_sheets = mf.get_google_sheet()
-    # Открыывем таблицу
-    all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
-    all_members = mf.get_all_memb_df(all_members)
 
 
     def get_new_members(file_name):
@@ -186,6 +203,12 @@ def add_members(request):
             return mf.pd.DataFrame(columns=columns)
         return data_memb[columns].reset_index(drop=True)
 
+    data_new_members = mf.pd.DataFrame()
+    g_sheets = mf.get_google_sheet()
+    # Открыывем таблицу
+    # all_members_sheets, all_members = mf.get_all_values_sheets(mf.CLUB_CP_MEMBERS_SHEET, g_sheets)
+    # all_members = mf.get_all_memb_df(all_members)
+
 
     memb_columns = ['date', 'name', 'phone', 'email', 'note', 'qrc_status',
                     'team', 'expire', 'print']
@@ -199,34 +222,27 @@ def add_members(request):
                                      )
     data_new_members['date'] = mf.pd.to_datetime(data_new_members['date']).dt.date                                     
 
+    all_mamb_email = []
+    q_set = list(Contacts.objects.only('elmail').exclude(elmail__in=('', '-')).values_list('elmail'))
+
+    for memb_email in q_set:
+        all_mamb_email.append(memb_email[0])
 
 
-    all_mamb_email = list(all_members[~all_members['email']
-                          .isin(['', '-'])]['email']
-                          )
     data_new_members = (data_new_members[~data_new_members['email']
         .isin(all_mamb_email)]
         )
+        
     data_new_members.sort_values(by='date', inplace=True)
-    # получение номера последней записи в таблице
-    mamb_last_row = len(all_members_sheets.sheet1.get_all_values())
-    row_cnt, col_cnt = data_new_members.shape
+    
+    # добавление данных в БД
+    for ind, member in data_new_members.iterrows():
+        dbf.add_user(member)
 
-    # добавление данных в гугл таблицу
-    cl_rng = mf.get_abcrage(0, mamb_last_row + 1,
-                            col_cnt - 1, mamb_last_row + row_cnt + 2)
-    # print(cl_rng)
-    cel_l = all_members_sheets.sheet1.range(cl_rng)
-    ind = 0
-    for i in range(row_cnt):
-        for j in range(col_cnt):
-            cel_l[ind].value = str(data_new_members.iloc[i][j])
-            ind += 1
-    all_members_sheets.sheet1.update_cells(cel_l)
     
     context = {
         # 'memb_add_is': mf.disply_table_html(pays_ishop),
-        'memb_add_csv': mf.disply_table_html(data_new_members),        
+        'memb_add': mf.disply_table_html(data_new_members),        
     }
     return render(request, "general/add_members.html", context)
 

@@ -86,6 +86,8 @@ import json
 import re
 import general.email_texts as et
 import os
+from general.models import Users
+
 
 with open('general/conf/email.json') as fm:
     em = json.load(fm)
@@ -195,7 +197,7 @@ def do_mailing(mail_list, team=False, to='', sender=SENDER_EMAIL,
     log_str = ''
     for index, row in mail_list.iterrows():
         if (not team) or row['team'].lower() == 'cотрудник':
-            if ((row['email'] not in ['', '-'] and row['sended'] == '')
+            if ((row['email'] not in ['', '-'] and row['sended'] == False)
                     or msg_text == 'no card'):
                 try:
                     if msg_text == 'main':
@@ -216,7 +218,8 @@ def do_mailing(mail_list, team=False, to='', sender=SENDER_EMAIL,
                                )
                     print(log_str)
                     log.append(log_str)
-                    row['sended'] = 'ДА'
+                    # mail_list.iloc[index]['sended'] = 
+                    mail_list.loc[index, 'sended'] = True
                 # except ValueError:
                 except BaseException as err:
                     log_str = (f"{datetime.now()} {index} || {row['name']} || "
@@ -275,6 +278,13 @@ def all_memb_rewrite_column(data, column_name, sheet, start_str=2):
 def do_mailing_and_log(mail_list, sheets):
     mail_list, log = do_mailing(mail_list, team=TEAM_SEND)
     all_memb_rewrite_column(mail_list, 'sended', sheets)
+    return log
+
+def do_mailing_and_log_db(mail_list):
+    mail_list, log = do_mailing(mail_list, team=TEAM_SEND)
+    for ind, memb in mail_list.iterrows():        
+        if memb['sended']:
+            Users.objects.filter(gid=memb['gid']).update(is_sended=True)
     return log
 
 
@@ -403,14 +413,32 @@ def disply_table_html(data, col_name=True):
     return result + '</table>'
 
 
+def disply_table_dj_html(data, dc=''):
+    result = '<table border="1">'
+    if dc != '':
+        result += '<tr>'
+        for col_n in dc.keys():
+            result += f"<th>{dc[col_n]}</th>"
+        result += '</tr>'
+        
+    for row in data:
+        result += f'<tr>'
+        for col in dc.keys():
+            field = getattr(row, col)
+            result += f"<td>{field}</td>"
+            
+        result += '</tr>'
+    return result + '</table>'
+
+
 def add_months_for_date(date, m):
     num_days=(0,31,28,31,30,31,30,31,31,30,31,30,31)
     year = date.year
     month = date.month + m
     day = date.day
     if month > 12:
-        month = month % 12
         year += month // 12
+        month = month % 12        
     if day > num_days[month]:
         day = num_days[month]
     return dt_date(year, month, day)

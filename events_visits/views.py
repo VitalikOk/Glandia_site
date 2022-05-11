@@ -1,7 +1,12 @@
 from django.shortcuts import render
 import general.main_func as mf
 import pandas as pd
+import general.db_func as dbf
+from general.models import Users, Contacts, EventsVisits
+from django.db.models import Q
 
+EV_COLUMNS = mf.ev_columns + ['gid', 'vv_card']
+EV_COLUMNS_BD = ['date', 'gid', 'expire', 'event', 'vv_card']
 
 def fix_qr_data(arr):
     """
@@ -18,27 +23,64 @@ def fix_qr_data(arr):
     return result
 
 
-def check_field(row, field_name, all_members):
+def check_field(row, field_name):
     """
     Функция для заполнения пустых полей
     """
     if (field_name not in row.index) or (row[field_name] == ''):
-        result = (all_members.loc[(all_members['phone'] == row['phone'])
-                                  | (all_members['vv_card'] == row['vv_card'])
-        , [field_name]].values
-                  )
-        if len(result) > 0:
-            row[field_name] = result[0][0]
+
+        bd_filds = {
+            'date': 'date_time',
+            'gid': 'gid',
+            'expire': 'expire',
+            'note': 'note',
+            'vv_card': 'vvcard',
+            'phone': 'phone',
+            'name': 'name',
+            'email': 'elmail'
+        }
+
+
+        # result = (all_members.loc[(all_members['phone'] == row['phone'])
+        #                           | (all_members['vv_card'] == row['vv_card'])
+        # , [field_name]].values
+        #           )
+
+
+        q_set = list(Contacts.objects.select_related('user')
+                        .filter(Q(phone=row['phone']) | Q(user__vvcard=row['vv_card']))
+                        .values_list('gid')
+                        )
+        gid = None
+        result = None
+        if len(q_set) > 0:
+            gid = q_set[0][0]   
+            if field_name == 'gid':
+                result  = int(gid)
+            else:
+                try:
+                    memb = Users.objects.filter(gid=gid)        
+                    result = getattr(memb[0], bd_filds[field_name])
+                except:
+                    memb = Contacts.objects.filter(gid=gid)        
+                    result = getattr(memb[0], bd_filds[field_name])                                     
+        
+        if result is not None and gid is not None:
+            row[field_name] = result
         else:
-            row[field_name] = f"{mf.COLUMS_NAMES[field_name]} не указано"
+            if field_name == 'gid':
+                row[field_name] = 0
+            else:
+                row[field_name] = f"{mf.COLUMS_NAMES[field_name]} не указано"
+            
     return row[field_name]
 
 
-def fill_data(data, all_members):
+def fill_data(data):
     """
     Функция для востановления данных из разных источников
     """
-    data_ev = pd.DataFrame(columns=mf.ev_columns)
+    data_ev = pd.DataFrame(columns=EV_COLUMNS)
     if 'vv_card' in data.columns:
         data['vv_card'] = data['vv_card'].apply(mf.change_cir_lat)
     # if 'event' not in data.columns:
@@ -63,9 +105,9 @@ def fill_data(data, all_members):
         data_ev = data
     data_ev.fillna('', inplace=True)
     for ind, row in data_ev.iterrows():  # Заполнение недостающих полей
-        for col in mf.ev_columns + ['vv_card']:
+        for col in EV_COLUMNS:
             if col not in ['event']:
-                data_ev.loc[ind, col] = check_field(row, col, all_members)
+                data_ev.loc[ind, col] = check_field(row, col)
     data_ev.fillna('', inplace=True)
     data_ev['date'] = pd.to_datetime(data_ev['date'])
     return data_ev
@@ -152,16 +194,8 @@ def ws_report_topd(json_data, action_type='', d_type='issues'):
         return report
 
 
-def get_last_date(events_log_las):
-    w_seets = events_log_las.worksheets()
-    for sh in w_seets:
-        last_sheet_rows = sh.get_all_values()
-        if len(last_sheet_rows) > 0:
-            last_date = (pd.to_datetime(last_sheet_rows[-1][0])
-                         - pd.DateOffset(hours=3)
-                         )
-            return str(last_date)
-    return None
+def get_last_date():
+    return EventsVisits.objects.all().order_by('date_time').last().date_time     
 
 
 def events_visits_menu(request):
@@ -170,32 +204,18 @@ def events_visits_menu(request):
 
 def events_visits_import(request):
     # Импорт данных с акций
-    data_events = pd.DataFrame(columns=mf.ev_columns)
-    all_members = mf.get_all_members()
+    data_events = pd.DataFrame(columns=EV_COLUMNS)
+    no_members = pd.DataFrame(columns=EV_COLUMNS)
     import_config = {
         'manual_imput': True
         , 'qr_form_ws_import_api': True
         , 'scan_qr_from_ws_api': True
-        , 'export_to_gsheet': True
+        , 'export_to_bd': True
     }
 
-    # создание имени файла с номером месяца
-    events_file_n = f"{mf.EVENTS_VISITS}{mf.MONTH}"
-    prev_events_file_n = f"{mf.EVENTS_VISITS}{mf.PREV_MONTH}"
-    # создание или открытие гугл таблицы
     g_sheets = mf.get_google_sheet()
-    try:
-        events_log_las = g_sheets.open(events_file_n)
-    except:
-        events_log_las = g_sheets.open(prev_events_file_n)
-
-    last_date = get_last_date(events_log_las)
-
-    if last_date is None:
-        events_log_las = g_sheets.open(prev_events_file_n)
-        last_date = get_last_date(events_log_las)
-    last_date = mf.datetime.strptime(last_date.split('.')[0], '%Y-%m-%d %H:%M:%S')
-    print(last_date)
+    last_date = get_last_date()
+    # last_date = mf.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S')
 
     # Импорт данных об участниках введйнных вручную
     def add_manual_imput(month, data_events, g_sheets):
@@ -206,12 +226,14 @@ def events_visits_import(request):
                                         , new_sheet=True)
             ma_bonus['event'] = 'Бонус за вступление, ручной ввод'
             # заполнение полей
-            ma_bonus = fill_data(ma_bonus, all_members)
+            ma_bonus = fill_data(ma_bonus)
             # Добавления данных введйнных вручную к остальным
             data_events = pd.concat([data_events, ma_bonus], ignore_index=True)
         else:
             print(f"Данные в таблтце \"{mf.MANUAL_ADD_SHEET + mf.MONTH}\" не найдены")
         return data_events
+
+    
 
     if import_config['manual_imput']:
         if last_date.strftime("%m") < mf.MONTH:
@@ -231,12 +253,12 @@ def events_visits_import(request):
                 start_date = str(pd.to_datetime(report.iloc[-1]['date'])
                                  - pd.DateOffset(hours=3, seconds=59)
                                  )
-                report = fill_data(report, all_members)
+                report = fill_data(report)
                 data_events = pd.concat([data_events,
-                                         report[mf.ev_columns + ['vv_card']]],
+                                         report[EV_COLUMNS]],
                                         ignore_index=True
                                         )
-                no_members = data_events[data_events['phone'] == 'Номер телефона не указано']
+                no_members = data_events[data_events['gid'] == 0]
             else:
                 print(f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
                 break
@@ -254,11 +276,13 @@ def events_visits_import(request):
                 start_date = str(pd.to_datetime(report.iloc[-1]['date'])
                                  - pd.DateOffset(hours=3, seconds=59)
                                  )
-                report = fill_data(report, all_members)
+                report = fill_data(report)
                 data_events = pd.concat([data_events,
-                                         report[mf.ev_columns + ['vv_card']]],
+                                         report[EV_COLUMNS]],
                                         ignore_index=True
                                         )
+                data_events = fill_data(data_events)
+
             else:
                 print(f'Нет данных о check_ins из API app.waveservice.ru c {last_date}')
                 break
@@ -267,32 +291,21 @@ def events_visits_import(request):
     # сортировка и заполненин nan
     data_events.sort_values(by='date', inplace=True)
     data_events.reset_index(drop=True, inplace=True)
-    data_events.fillna('', inplace=True)
-    data_events = data_events[data_events['phone'] != 'Номер телефона не указано']
-    print(data_events)
+    data_events['gid'] = data_events['gid'].astype('int')
+    # data_events.fillna('', inplace=True)
+    data_events = data_events[data_events['gid'] != 0]
 
-    if import_config['export_to_gsheet']:
-        try:
-            events_log = g_sheets.open(events_file_n).sheet1
-        except:
-            events_log = g_sheets.create(events_file_n).sheet1
-        # получение номера последней записи в таблице
-        last_row = len(events_log.get_all_values())
-        row_cnt, col_cnt = data_events.shape
+    if import_config['export_to_bd']:
+        # добавление данных в таблицу
+        for ind, row in data_events.iterrows():
+            dbf.add_visit(row)
 
-        # добавление данных в гугл таблицу
-        cl_rng = mf.get_abcrage(0, last_row + 1, col_cnt - 1, last_row + row_cnt + 2)
-        # print(cl_rng)
-        cel_l = events_log.range(cl_rng)
-        ind = 0
-        for i in range(row_cnt):
-            for j in range(col_cnt):
-                cel_l[ind].value = str(data_events.iloc[i][j])
-                ind += 1
-        events_log.update_cells(cel_l)
     context = {
         'message': 'Отчёт о посещениях сформирован',
+        'start_date': last_date,
+        'visits_num': len(data_events),
         'no_members': mf.disply_table_html(no_members),
+        'members': mf.disply_table_html(data_events[EV_COLUMNS_BD]),
     }
     return render(request, "events_visits_import.html", context)
 

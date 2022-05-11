@@ -2,7 +2,10 @@ from django.shortcuts import render
 import general.main_func as mf
 import pandas as pd
 from ast import Str
-
+import general.db_func as dbf
+from general.models import Users, Contacts, SentReportsVV, EventsVisits
+from django.db.models import Q
+from datetime import datetime
 
 def vvrep_to_gs(file_name, data):
     g_sheets = mf.get_google_sheet()
@@ -28,23 +31,33 @@ def vvrep_to_gs(file_name, data):
     #   sheet.insert_row(list(row),ind+1)
 
 
-def add_bonus_to_team(rol, bonus_num, all_members):
-    team = (all_members[(all_members['team'].str.lower().replace('ё', 'е')
-                         == rol.lower())
-                        & (all_members['vv_card'] != 'Нет карты')][['vv_card', 'phone']]
-    )
+def add_bonus_to_team(b_role, bonus_num):
+    if 'G' in str(b_role):
+        b_gid = int(b_role.lstrip('G'))
+        team = pd.DataFrame(list(Users.objects.filter(gid=b_gid)
+                                            .values())
+                                            )
+    else:
+        team = pd.DataFrame(list(Users.objects.filter(role=b_role)
+                                            .exclude(vvcard='НЕТ КАРТЫ')
+                                            .values())
+                                            )
+    team = team[['gid','vvcard']]
     team['count'] = int(bonus_num)
     return team
 
 
-def get_team_bonus(all_members, start_day=1):
+def get_team_bonus(start_day=1):
     teab_bonus = pd.DataFrame()
-    team = {'Сотрудник': 3,
-            'волонтер': 1,
-            'Регулярный посетитель': 3
+    team = {1: 3, #'Сотрудник'
+            2: 1, #'волонтер'
+                 #'Регулярный посетитель'
+            'G73': 3,
+            'G101': 3, 
+            'G93': 2,
             }
     for rol in team:
-        teab_bonus = pd.concat([teab_bonus, add_bonus_to_team(rol, team[rol], all_members)])
+        teab_bonus = pd.concat([teab_bonus, add_bonus_to_team(rol, team[rol])])
     return teab_bonus
 
 
@@ -130,36 +143,61 @@ def vv_events_visits_report(request):
     # VV_EVENTS_REPORT
     # отчёт посещений акций для
     g_sheets = mf.get_google_sheet()
-    all_members = mf.get_all_members(g_sheets)
-    vv_rep_events = vvrep_from_gs(mf.EVENTS_VISITS, mf.ev_columns + ['vv_card'], g_sheets)
-    if type(vv_rep_events) != None and len(vv_rep_events):
-        vv_rep_events = (vv_rep_events.groupby(['vv_card', 'phone']).count()
+
+    message = 'Cформирован'
+    start_date = (SentReportsVV.objects.filter(report_type='event')
+                               .order_by('date').last()
+                               .date
+                        )
+    
+    vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
+    vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
+    vv_rep_events = vv_rep_events[['date','vvcard','gid']] 
+    vv_rep_events.drop_duplicates(inplace=True)
+
+    if vv_rep_events is not None and len(vv_rep_events):
+        vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).count()
                          .rename(columns={'date': 'count'})
                          .sort_values(by='count', ascending=False)
                          .reset_index(drop=False)
                          )
-        vv_rep_events = vv_rep_events[vv_rep_events['vv_card'] != 'Нет карты']
+        vv_rep_events = vv_rep_events[vv_rep_events['vvcard'] != 'Нет карты']
     else:
-        print('Нет данных о посещении акций')
-    vv_rep_events = pd.concat([vv_rep_events, get_team_bonus(all_members)])
+        message = 'Нет данных о посещении акций'
+
+
+    vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
     vv_rep_events['count'] = vv_rep_events['count'].astype('int')
-    vv_rep_events = (vv_rep_events.groupby(['vv_card', 'phone']).sum()
+    vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).sum()
                      .rename(columns={'date': 'count'})
                      .sort_values(by='count', ascending=False)
                      .reset_index(drop=False)
                      )
-    vv_rep_events = vv_rep_events[(vv_rep_events['vv_card'].str.fullmatch(r'.{6,8}'))]
-    # display(vv_rep_events)
-    # vv_rep_events['vv_card'] = vv_rep_events.apply(get_vv_card_all, axis=1)
-    # vv_rep_events_no_send = vv_rep_events[vv_rep_events['vv_card'].isin(['Нет карты','Не в клубе'])]
-    # vv_rep_events_send = vv_rep_events[~vv_rep_events['vv_card'].isin(['Нет карты','Не в клубе'])]
-    # display(vv_rep_events_no_send.sort_values(by='vv_card'))
+    vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]
+
 
     if len(vv_rep_events):
-        vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vv_card', 'count']])
+        vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
     else:
-        print('Нет данных для добавления в очёт')
+        message = 'Нет данных для добавления в очёт'
+
+    report_log = {
+        'date': datetime.now().date(),
+        'memb_count': len(vv_rep_events),
+        'bonus_count': vv_rep_events['count'].sum(),
+        'bonus_rate': 50,
+        'report_type': 'event',
+    }
+
+    dbf.add_sent_report_vv(report_log)
+    
+
     context = {
-        'bonus_count': vv_rep_events['count'].sum()
+        'start_date': start_date,
+        'date': report_log['date'],
+        'memb_count': report_log['memb_count'],
+        'bonus_count': report_log['bonus_count'],
+        'vv_rep_events': mf.disply_table_html(vv_rep_events),
+        'message': message,
     }
     return render(request, "vv_reports/vv_events_visits_report.html", context)
