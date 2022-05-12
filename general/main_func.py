@@ -13,8 +13,8 @@ EVENTS_VISITS = 'Посещения акций '
 ev_columns = ['date', 'phone', 'name', 'expire', 'email', 'event']
 
 # имена файлов отсётов для ВВ
-VV_EVENTS_REPORT = 'ВВ Чистый Петербург акции '
-VV_MEMBERS_REPORT = 'ВВ Чистый Петербург члены клуба '
+VV_EVENTS_REPORT = 'ВВ Чистый Петербург акции'
+VV_MEMBERS_REPORT = 'ВВ Чистый Петербург члены клуба'
 
 # Отправка только своим - True, всем - False
 TEAM_SEND = False

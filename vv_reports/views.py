@@ -10,9 +10,10 @@ from datetime import datetime
 def vvrep_to_gs(file_name, data):
     g_sheets = mf.get_google_sheet()
     try:
-        sheet = g_sheets.open(file_name + mf.MONTH).sheet1
+        sheets = g_sheets.open(file_name)
     except:
-        sheet = g_sheets.create(file_name + mf.MONTH).sheet1
+        sheets = g_sheets.create(file_name)
+    sheet = sheets.sheet1    
     sheet.clear()
     # добавление данных в гугл таблицу
     row_cnt, col_cnt = data.shape
@@ -26,6 +27,9 @@ def vvrep_to_gs(file_name, data):
             cel_l[ind].value = str(data.iloc[i][j])
             ind += 1
     sheet.update_cells(cel_l)
+
+    return f"https://docs.google.com/spreadsheets/d/{sheets.id}"
+
 
     # for ind, row in data.iterrows():
     #   sheet.insert_row(list(row),ind+1)
@@ -130,11 +134,36 @@ def vv_nocard_emails(request):
 
 def vv_all_members_report(request):
     # VV_MEMBERS_REPORT
-    all_members = mf.get_all_members()
-    vv_rep_members = make_vvrep(all_members[all_members['vv_card'].str.upper() != 'НЕТ КАРТЫ'], ['vv_card'])
-    vvrep_to_gs(mf.VV_MEMBERS_REPORT, vv_rep_members)
+
+    message = 'Cформирован'
+    
+    vv_rep_members = pd.DataFrame(list(Users.objects.filter(~Q(vvcard='НЕТ КАРТЫ'))
+                                                    .order_by('date_in').values()))  
+
+    if len(vv_rep_members):
+        vv_rep_members = vv_rep_members[['date_in','gid','vvcard']]
+        vv_rep_members.drop_duplicates(subset='vvcard', inplace=True)    
+        gs_link = vvrep_to_gs(mf.VV_MEMBERS_REPORT, pd.DataFrame(vv_rep_members['vvcard']))
+    else:
+        gs_link =''
+        message = 'Нет данных для добавления в очёт'
+
+    report_log = {
+        'date': datetime.now().date(),
+        'memb_count': len(vv_rep_members),
+        'bonus_count': len(vv_rep_members),
+        'bonus_rate': 200,
+        'report_type': 'subscrip',
+    }
+
+    # dbf.add_sent_report_vv(report_log)
+
     context = {
-        'members_count': len(vv_rep_members)
+        'date': report_log['date'],
+        'memb_count': report_log['memb_count'],
+        'vv_rep_members': mf.disply_table_html(vv_rep_members),
+        'message': message,
+        'gs_link': gs_link,
     }
     return render(request, "vv_reports/vv_all_members_report.html", context)
 
@@ -142,7 +171,6 @@ def vv_all_members_report(request):
 def vv_events_visits_report(request):
     # VV_EVENTS_REPORT
     # отчёт посещений акций для
-    g_sheets = mf.get_google_sheet()
 
     message = 'Cформирован'
     start_date = (SentReportsVV.objects.filter(report_type='event')
@@ -151,34 +179,33 @@ def vv_events_visits_report(request):
                         )
     
     vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
-    vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
-    vv_rep_events = vv_rep_events[['date','vvcard','gid']] 
-    vv_rep_events.drop_duplicates(inplace=True)
-
-    if vv_rep_events is not None and len(vv_rep_events):
-        vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).count()
-                         .rename(columns={'date': 'count'})
-                         .sort_values(by='count', ascending=False)
-                         .reset_index(drop=False)
-                         )
-        vv_rep_events = vv_rep_events[vv_rep_events['vvcard'] != 'Нет карты']
-    else:
-        message = 'Нет данных о посещении акций'
-
-
-    vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
-    vv_rep_events['count'] = vv_rep_events['count'].astype('int')
-    vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).sum()
-                     .rename(columns={'date': 'count'})
-                     .sort_values(by='count', ascending=False)
-                     .reset_index(drop=False)
-                     )
-    vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]
-
-
     if len(vv_rep_events):
-        vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
+        vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
+        vv_rep_events = vv_rep_events[['date','vvcard','gid']] 
+        vv_rep_events.drop_duplicates(inplace=True)
+
+        if vv_rep_events is not None and len(vv_rep_events):
+            vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).count()
+                            .rename(columns={'date': 'count'})
+                            .sort_values(by='count', ascending=False)
+                            .reset_index(drop=False)
+                            )
+            vv_rep_events = vv_rep_events[vv_rep_events['vvcard'] != 'Нет карты']
+        else:
+            message = 'Нет данных о посещении акций'
+
+
+        vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
+        vv_rep_events['count'] = vv_rep_events['count'].astype('int')
+        vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).sum()
+                        .rename(columns={'date': 'count'})
+                        .sort_values(by='count', ascending=False)
+                        .reset_index(drop=False)
+                        )
+        vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]    
+        gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
     else:
+        gs_link =''
         message = 'Нет данных для добавления в очёт'
 
     report_log = {
@@ -199,5 +226,6 @@ def vv_events_visits_report(request):
         'bonus_count': report_log['bonus_count'],
         'vv_rep_events': mf.disply_table_html(vv_rep_events),
         'message': message,
+        'gs_link': gs_link,
     }
     return render(request, "vv_reports/vv_events_visits_report.html", context)

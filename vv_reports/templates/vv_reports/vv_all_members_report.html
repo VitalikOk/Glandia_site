@@ -5,13 +5,19 @@
     <title>G-LANDIA</title>
 </head>
 <body>
- <H1>Отчёт о всех членах колуба создан</H1>
+    <H1>Отчёт о всех членах колуба</H1>
     <div>
-        <h3>Количество участников {{ members_count }}</h3>
+        <h3><a href="{{ gs_link }}">Отчёт о членах клуба на {{ date }} - {{ message }}</a>
+        <br>Количество участников с картами ВВ {{ memb_count }}
+        </h3>
+        <br><br>        
+        <br><br>
+        {{ vv_rep_members|safe }}
         <br><br>
         <a href="../vv_reports_menu">назад</a>
         <br>
     </div>
+
 
 </body>
 </html>
