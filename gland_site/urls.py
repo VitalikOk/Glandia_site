@@ -20,6 +20,7 @@ import vv_reports.views as vv_reports
 import events_visits.views as events_visits
 from django.conf.urls.static import static
 from django.conf import settings
+import usercreation.views as usercreation
 
 urlpatterns =[
     path("admin/", admin.site.urls),
@@ -37,7 +38,8 @@ urlpatterns =[
     path("vv_events_visits_report/", vv_reports.vv_events_visits_report),
     path("events_visits_menu/", events_visits.events_visits_menu),
     path("events_visits_import/", events_visits.events_visits_import),
-
+    path('adduser/', usercreation.adduserform),
+    path('addition_result/', usercreation.results)
 ]
 # включаем возможность обработки картинок
 if settings.DEBUG:

@@ -9,7 +9,7 @@ class Command(BaseCommand):
         ROLES = (
             'Сотрудник',
             'Волонтёр',
-            'Работник'
+            'Участник'
         )
 
         for obj in ROLES:

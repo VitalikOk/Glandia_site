@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Add user</title>
+</head>
+<body>
+
+    <div class="container" style="display: flex; flex-direction: column; justify-content: center;">
+
+        <form action="/addition_result/" method="post">{% csrf_token %}
+
+            <h2>Имя участника</h2>
+            <input type="text" name="name" style="width: 30%;">
+            <h2>Email</h2>
+            <input type="email" name="email" style="width: 30%;">
+            <h2>Номер телефона</h2>
+            <input type="text" name="phone" style="width: 30%;">
+            <h2>Номер карты ВкусВилл</h2>
+            <input type="text" name="vvcard" style="width: 30%;">
+
+            <h2>Роль</h2>
+                <select style="width: 30%;" name="role">
+                    {% for role in roles_list %}
+                        <option>{{ role }}</option>
+                    {% endfor %}
+                </select>
+            <h2>Заметка</h2>
+                <input type="text" name="note" style="width: 30%;">
+            <h2>Окончание действия абонимента</h2>
+                <input type="text" name="expire" style="width: 30%;">
+            <br>
+            <br>
+            <br>
+
+            <input type="submit" value="Добавить">          
+           
+            
+        </form>
+
+    </div>
+
+</body>
+</html>

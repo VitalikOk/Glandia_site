@@ -6,6 +6,9 @@ from general.enums import Role
 class Roles(models.Model):
     role = models.CharField(verbose_name='Role', max_length=64, unique=True, null=False)
 
+    def __str__(self):
+        return f'{self.id} {self.role}'
+
 class Users(models.Model):
     gid = models.IntegerField(verbose_name = "идентификатор", unique=True, null=True)
     role = models.ForeignKey(Roles, on_delete=models.CASCADE)
@@ -15,7 +18,6 @@ class Users(models.Model):
     note = models.TextField(verbose_name="заметка", blank=True)
     expire = models.CharField(verbose_name="дата истечения", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
     vvcard = models.CharField(verbose_name="номер карты ВВ", max_length=64, default="НЕТ КАРТЫ")
-
 
 class Contacts(models.Model):
     user = models.ForeignKey(Users, on_delete=models.CASCADE)    

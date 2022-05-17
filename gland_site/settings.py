@@ -41,7 +41,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'general',
     'vv_reports',
-    'events_visits'
+    'events_visits',
+    'usercreation'
 ]
 
 MIDDLEWARE = [
