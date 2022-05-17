@@ -46,7 +46,7 @@ class Command(BaseCommand):
                 current_date = f'{expd[-3] if len(expd) == 3 else 15}.expd[-2].{expd[-1]}'
             else:
                 # очень временно, потом удалить:
-                current_date = '31.12.2022')
+                current_date = '31.12.2022'
         
      
             if member['phone'] in VIP_DICT.keys():

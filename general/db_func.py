@@ -6,9 +6,12 @@ import general.main_func as mf
 
 
 def next_gid():
-
-    last_gid = Users.objects.all().order_by('gid').last().gid                                 
     
+    try:
+        last_gid = Users.objects.all().order_by('gid').last().gid                                 
+    except:
+        last_gid = None
+
     if last_gid is not None:
         max_gid = int(last_gid)
         if max_gid < 101:
@@ -20,12 +23,12 @@ def next_gid():
     else:
         return 102
 
-def add_user(member):
+def add_user(member, db_fill=True):
     current_gid = next_gid()
 
     user, _ = Users.objects.get_or_create(
         gid = current_gid,                
-        role = get_role(member),    
+        role = get_role(member) if db_fill else member['role'],    
         date_in = member['date'],
         is_sended = True if member['qrc_status'] == 'ДА' else False,
         note = member['note'],

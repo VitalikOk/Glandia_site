@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Additional Result</title>
+</head>
+<body> 
+    <h1 style="color: chartreuse"> {{ status }} </h1>  
+  
+    <h1> G-{{ last_user.gid }}</h1>
+    <h2>Имя участника</h2>
+    <h1> {{ last_user.name }}</h1>   
+    <h2>Email</h2>
+    <h1> {{ last_user.elmail }}</h1>
+    <h2>Номер телефона</h2>
+    <h1> {{ last_user.phone }}</h1>
+    <h2>Номер карты ВкусВилл</h2>
+    <h1> {{ last_user.user.vvcard }}</h1>
+    <h2>Роль</h2>
+    <h1> {{ last_user.user.role }}</h1>
+   
+</body>
+</html>
