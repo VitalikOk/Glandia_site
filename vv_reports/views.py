@@ -46,13 +46,13 @@ def add_bonus_to_team(b_role, bonus_num):
                                             .exclude(vvcard='НЕТ КАРТЫ')
                                             .values())
                                             )
-    team = team[['gid','vvcard']]
+    team = team[['gid','vvcard', 'expire']]
     team['count'] = int(bonus_num)
     return team
 
 
 def get_team_bonus(start_day=1):
-    teab_bonus = pd.DataFrame()
+    team_bonus = pd.DataFrame()
     team = {1: 3, #'Сотрудник'
             2: 1, #'волонтер'
                  #'Регулярный посетитель'
@@ -61,8 +61,8 @@ def get_team_bonus(start_day=1):
             'G93': 2,
             }
     for rol in team:
-        teab_bonus = pd.concat([teab_bonus, add_bonus_to_team(rol, team[rol])])
-    return teab_bonus
+        team_bonus = pd.concat([team_bonus, add_bonus_to_team(rol, team[rol])])
+    return team_bonus
 
 
 def get_vv_card_all(row):
@@ -134,98 +134,113 @@ def vv_nocard_emails(request):
 
 def vv_all_members_report(request):
     # VV_MEMBERS_REPORT
+    if request.method == 'POST':
+        message = 'Cформирован'
+        
+        vv_rep_members = pd.DataFrame(list(Users.objects.filter(~Q(vvcard='НЕТ КАРТЫ'))
+                                                        .order_by('date_in').values()))  
 
-    message = 'Cформирован'
-    
-    vv_rep_members = pd.DataFrame(list(Users.objects.filter(~Q(vvcard='НЕТ КАРТЫ'))
-                                                    .order_by('date_in').values()))  
+        if len(vv_rep_members):
+            vv_rep_members = vv_rep_members[['date_in','gid','vvcard', 'expire']]
+            vv_rep_members.drop_duplicates(subset='vvcard', inplace=True)    
+            vv_rep_members['expire'] = pd.to_datetime(vv_rep_members['expire'], format='%d.%m.%Y').dt.date
+            expire = vv_rep_members[(vv_rep_members['expire'] < datetime.now().date())]   
+            vv_rep_members = vv_rep_members[(vv_rep_members['expire'] >= datetime.now().date())]   
+            gs_link = vvrep_to_gs(mf.VV_MEMBERS_REPORT, pd.DataFrame(vv_rep_members['vvcard']))
+        else:
+            gs_link =''
+            message = 'Нет данных для добавления в очёт'
 
-    if len(vv_rep_members):
-        vv_rep_members = vv_rep_members[['date_in','gid','vvcard']]
-        vv_rep_members.drop_duplicates(subset='vvcard', inplace=True)    
-        gs_link = vvrep_to_gs(mf.VV_MEMBERS_REPORT, pd.DataFrame(vv_rep_members['vvcard']))
-    else:
-        gs_link =''
-        message = 'Нет данных для добавления в очёт'
+        report_log = {
+            'date': datetime.now().date(),
+            'memb_count': len(vv_rep_members),
+            'bonus_count': len(vv_rep_members),
+            'bonus_rate': 200,
+            'report_type': 'subscrip',
+        }
 
-    report_log = {
-        'date': datetime.now().date(),
-        'memb_count': len(vv_rep_members),
-        'bonus_count': len(vv_rep_members),
-        'bonus_rate': 200,
-        'report_type': 'subscrip',
-    }
+        if "add_rep_in_db" in request.POST: 
+            dbf.add_sent_report_vv(report_log)
 
-    # dbf.add_sent_report_vv(report_log)
-
-    context = {
-        'date': report_log['date'],
-        'memb_count': report_log['memb_count'],
-        'vv_rep_members': mf.disply_table_html(vv_rep_members),
-        'message': message,
-        'gs_link': gs_link,
-    }
-    return render(request, "vv_reports/vv_all_members_report.html", context)
+        context = {
+            'date': report_log['date'],
+            'memb_count': report_log['memb_count'],
+            'vv_rep_members': mf.disply_table_html(vv_rep_members),
+            'expire': mf.disply_table_html(expire),
+            'message': message,
+            'gs_link': gs_link,
+        }
+        return render(request, "vv_reports/vv_all_members_report.html", context)
 
 
 def vv_events_visits_report(request):
     # VV_EVENTS_REPORT
     # отчёт посещений акций для
+    if request.method == 'POST':
+        message = 'Cформирован'
+        start_date = (SentReportsVV.objects.filter(report_type='event')
+                                .order_by('date').last()
+                                .date
+                            )
+        
+        vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
+        if len(vv_rep_events):
+            vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
+            vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire']] 
+            vv_rep_events.drop_duplicates(inplace=True)
 
-    message = 'Cформирован'
-    start_date = (SentReportsVV.objects.filter(report_type='event')
-                               .order_by('date').last()
-                               .date
-                        )
-    
-    vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
-    if len(vv_rep_events):
-        vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
-        vv_rep_events = vv_rep_events[['date','vvcard','gid']] 
-        vv_rep_events.drop_duplicates(inplace=True)
+            if vv_rep_events is not None and len(vv_rep_events):
+                vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire']).count()
+                                .rename(columns={'date': 'count'})
+                                .sort_values(by='count', ascending=False)
+                                .reset_index(drop=False)
+                                )
+                vv_rep_events = vv_rep_events[vv_rep_events['vvcard'] != 'Нет карты']
+            else:
+                message = 'Нет данных о посещении акций'
 
-        if vv_rep_events is not None and len(vv_rep_events):
-            vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).count()
+
+            vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
+            vv_rep_events['count'] = vv_rep_events['count'].astype('int')
+            vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire']).sum()
                             .rename(columns={'date': 'count'})
                             .sort_values(by='count', ascending=False)
                             .reset_index(drop=False)
                             )
-            vv_rep_events = vv_rep_events[vv_rep_events['vvcard'] != 'Нет карты']
+            vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]   
+            vv_rep_events['expire'] =  pd.to_datetime(vv_rep_events['expire'], format='%d.%m.%Y').dt.date
+            expire = vv_rep_events[(vv_rep_events['expire'] < datetime.now().date())]   
+            vv_rep_events = vv_rep_events[(vv_rep_events['expire'] >= datetime.now().date())]   
+
+            gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
+
+            report_log = {
+                'date': datetime.now().date(),
+                'memb_count': len(vv_rep_events),
+                'bonus_count': vv_rep_events['count'].sum(),
+                'bonus_rate': 50,
+                'report_type': 'event',
+            }
         else:
-            message = 'Нет данных о посещении акций'
+            gs_link = ''
+            message = 'Нет данных для добавления в очёт'
+            report_log = {
+                'date': datetime.now().date(),
+                'memb_count': len(vv_rep_events),
+                'bonus_count': 0,
+            }
 
-
-        vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
-        vv_rep_events['count'] = vv_rep_events['count'].astype('int')
-        vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid']).sum()
-                        .rename(columns={'date': 'count'})
-                        .sort_values(by='count', ascending=False)
-                        .reset_index(drop=False)
-                        )
-        vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]    
-        gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
-    else:
-        gs_link =''
-        message = 'Нет данных для добавления в очёт'
-
-    report_log = {
-        'date': datetime.now().date(),
-        'memb_count': len(vv_rep_events),
-        'bonus_count': vv_rep_events['count'].sum(),
-        'bonus_rate': 50,
-        'report_type': 'event',
-    }
-
-    dbf.add_sent_report_vv(report_log)
-    
-
-    context = {
-        'start_date': start_date,
-        'date': report_log['date'],
-        'memb_count': report_log['memb_count'],
-        'bonus_count': report_log['bonus_count'],
-        'vv_rep_events': mf.disply_table_html(vv_rep_events),
-        'message': message,
-        'gs_link': gs_link,
-    }
-    return render(request, "vv_reports/vv_events_visits_report.html", context)
+        if "add_rep_in_db" in request.POST: 
+            dbf.add_sent_report_vv(report_log)
+        
+        context = {
+            'start_date': start_date,
+            'date': report_log['date'],
+            'memb_count': report_log['memb_count'],
+            'bonus_count': report_log['bonus_count'],
+            'vv_rep_events': mf.disply_table_html(vv_rep_events),
+            'expire': mf.disply_table_html(expire),
+            'message': message,
+            'gs_link': gs_link,
+        }
+        return render(request, "vv_reports/vv_events_visits_report.html", context)

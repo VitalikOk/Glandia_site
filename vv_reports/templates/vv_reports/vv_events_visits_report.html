@@ -12,6 +12,9 @@
         <br>Количество участников {{ memb_count }}
         <br>Количество бонусов {{ bonus_count }}</h3>
         <br><br>
+        <h3><br>Истёк срок абонимента</h3>
+        {{ expire|safe }}        
+        <br><br>
         {{ vv_rep_events|safe }}
         <br><br>
         <a href="../vv_reports_menu">назад</a>
