@@ -293,7 +293,7 @@ def events_visits_import(request):
     data_events.reset_index(drop=True, inplace=True)
     data_events['gid'] = data_events['gid'].astype('int')
     # data_events.fillna('', inplace=True)
-    data_events = data_events[data_events['gid'] != 0]
+    # data_events = data_events[data_events['gid'] != 0]
 
     if import_config['export_to_bd']:
         # добавление данных в таблицу
