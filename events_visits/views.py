@@ -27,7 +27,7 @@ def check_field(row, field_name):
     """
     Функция для заполнения пустых полей
     """
-    if (field_name not in row.index) or (row[field_name] == ''):
+    if (field_name not in row.index) or (row[field_name] == '') or (field_name == 'expire'):
 
         bd_filds = {
             'date': 'date_time',
@@ -152,7 +152,7 @@ def attrs_normalise(data):
     attrs = {'phone': '', 'email': '', 'vv_card': ''}
     for attr in data:
         if attr['name'] == 'Номер карты ВкусВилл':
-            attrs['vv_card'] = attr['value'].replace('Карта', '').strip(' №')
+            attrs['vv_card'] = attr['value'].replace('Карта', '').strip(' №').strip()
         elif attr['name'] == 'Телефон':
             attrs['phone'] = attr['value']
         elif attr['name'] == 'Email':
@@ -271,12 +271,13 @@ def events_visits_import(request):
         while len_rep == 100:
             ws_json = get_waveservice_api(created_from=start_date, d_type='check_ins')
             if len(ws_json['data']) > 0:
-                report = ws_report_topd(ws_json, d_type='check_ins')
+                report = ws_report_topd(ws_json, d_type='check_ins')                
                 len_rep = len(report)
                 start_date = str(pd.to_datetime(report.iloc[-1]['date'])
                                  - pd.DateOffset(hours=3, seconds=59)
                                  )
                 report = fill_data(report)
+                report['event'] = 'Мобильная станци'
                 data_events = pd.concat([data_events,
                                          report[EV_COLUMNS]],
                                         ignore_index=True

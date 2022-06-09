@@ -17,9 +17,10 @@ class Migration(migrations.Migration):
                 ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
                 ('name', models.CharField(max_length=64, verbose_name='имя')),
                 ('chp_point', models.BooleanField(default=True, verbose_name='принадлежность пункта сбора "Чистому Петербургу"')),
-                ('accrual_restrict', models.IntegerField(choices=[(1, 'One'), (2, 'Two'), (3, 'Three'), (4, 'Four'), (5, 'Five'), (6, 'Six'), (7, 'Seven')], default=1, verbose_name='ограничение сколько раз в неделю можно начислять от 1-7 ')),
-                ('cost_by_visit', models.IntegerField(default=0, verbose_name='')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, to='general.users')),
+                ('accrual_restrict', models.IntegerField(choices=[(1, 'One'), (2, 'Two'), (3, 'Three'), (4, 'Four'), (5, 'Five'), (6, 'Six'), (7, 'Seven')], default=1, verbose_name='ограничение сколько раз в неделю можно начислять от 1-7')),
+                ('cost_by_visit', models.IntegerField(default=0, verbose_name='стоимость посещения не участником')),
+                ('accrual_restrict', models.IntegerField(choices=[(1, 'One'), (2, 'Two'), (3, 'Three'), (4, 'Four'), (5, 'Five'), (6, 'Six'), (7, 'Seven')], default=1, verbose_name='ограничение для не участников клуба 1-7')),
+                ('cost_by_nonmember', models.IntegerField(default=0, verbose_name='стоимость посещения')),
             ],
         ),
     ]

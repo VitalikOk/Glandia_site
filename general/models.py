@@ -44,14 +44,6 @@ class SentReportsVV(models.Model):
     report_type = models.CharField(verbose_name="тип отчёта event|subscrip", max_length=64, default="event")
 
 
-'''
-Привет надо добавить таблицу называется пункты сбора.
-Поля: название, пнкт чп (буливы типа наш не наш), 
-количество в неделю (ограничение сколько раз в неделю можно начислять от 1 - 7), 
-и сумма сколько за одно посещение.
-'''
-
-
 class CollectionPoints(models.Model):
     ACCURAL_RESTRICT_CHOICES = (
         (1, 'One'),
@@ -72,26 +64,6 @@ class CollectionPoints(models.Model):
     name=models.CharField(verbose_name="имя", max_length=64)
     chp_point=models.BooleanField(verbose_name='принадлежность пункта сбора "Чистому Петербургу"', default=True)
     accrual_restrict=models.IntegerField(verbose_name='ограничение сколько раз в неделю можно начислять от 1-7 ', choices=ACCURAL_RESTRICT_CHOICES, default=1)
-    cost_by_visit=models.IntegerField(verbose_name='', default=0)
-    user = models.ForeignKey(Users, on_delete=models.CASCADE)
-
-
-'''
-class Student(models.Model):
-    FRESHMAN = 'FR'
-    SOPHOMORE = 'SO'
-    JUNIOR = 'JR'
-    SENIOR = 'SR'
-    YEAR_IN_SCHOOL_CHOICES = (
-        (FRESHMAN, 'Freshman'),
-        (SOPHOMORE, 'Sophomore'),
-        (JUNIOR, 'Junior'),
-        (SENIOR, 'Senior'),
-    )
-    year_in_school = models.CharField(max_length=2,
-                                      choices=YEAR_IN_SCHOOL_CHOICES,
-                                      default=FRESHMAN)
-
-    def is_upperclass(self):
-        return self.year_in_school in (self.JUNIOR, self.SENIOR)
-'''
+    cost_by_visit=models.IntegerField(verbose_name='стоимость посещения', default=0)
+    accrual_restrict_nonmember=models.IntegerField(verbose_name='ограничение для не участников клуба 1-7', choices=ACCURAL_RESTRICT_CHOICES, default=1)
+    cost_by_nonmember=models.IntegerField(verbose_name='стоимость посещения не участником', default=0)
