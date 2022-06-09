@@ -56,9 +56,10 @@ def get_team_bonus(start_day=1):
     team = {1: 3, #'Сотрудник'
             2: 1, #'волонтер'
                  #'Регулярный посетитель'
-            'G73': 3,
+            'G73': 15,
             'G101': 3, 
             'G93': 2,
+            'G2': 15
             }
     for rol in team:
         team_bonus = pd.concat([team_bonus, add_bonus_to_team(rol, team[rol])])
@@ -140,15 +141,16 @@ def vv_all_members_report(request):
         vv_rep_members = pd.DataFrame(list(Users.objects.filter(~Q(vvcard='НЕТ КАРТЫ'))
                                                         .order_by('date_in').values()))  
 
+        gs_link =''
         if len(vv_rep_members):
             vv_rep_members = vv_rep_members[['date_in','gid','vvcard', 'expire']]
             vv_rep_members.drop_duplicates(subset='vvcard', inplace=True)    
             vv_rep_members['expire'] = pd.to_datetime(vv_rep_members['expire'], format='%d.%m.%Y').dt.date
             expire = vv_rep_members[(vv_rep_members['expire'] < datetime.now().date())]   
-            vv_rep_members = vv_rep_members[(vv_rep_members['expire'] >= datetime.now().date())]   
-            gs_link = vvrep_to_gs(mf.VV_MEMBERS_REPORT, pd.DataFrame(vv_rep_members['vvcard']))
-        else:
-            gs_link =''
+            vv_rep_members = vv_rep_members[(vv_rep_members['expire'] >= datetime.now().date())]  
+            if "gs_create" in request.POST:  
+                gs_link = vvrep_to_gs(mf.VV_MEMBERS_REPORT, pd.DataFrame(vv_rep_members['vvcard']))
+        else:            
             message = 'Нет данных для добавления в очёт'
 
         report_log = {
@@ -160,7 +162,9 @@ def vv_all_members_report(request):
         }
 
         if "add_rep_in_db" in request.POST: 
-            dbf.add_sent_report_vv(report_log)
+            dbf.add_sent_report_vv(report_log)    
+            
+            
 
         context = {
             'date': report_log['date'],
@@ -184,6 +188,7 @@ def vv_events_visits_report(request):
                             )
         
         vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
+        gs_link = ''
         if len(vv_rep_events):
             vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
             vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire']] 
@@ -208,11 +213,12 @@ def vv_events_visits_report(request):
                             .reset_index(drop=False)
                             )
             vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]   
+            vv_rep_events = vv_rep_events[vv_rep_events['gid'] != 0]   
             vv_rep_events['expire'] =  pd.to_datetime(vv_rep_events['expire'], format='%d.%m.%Y').dt.date
             expire = vv_rep_events[(vv_rep_events['expire'] < datetime.now().date())]   
             vv_rep_events = vv_rep_events[(vv_rep_events['expire'] >= datetime.now().date())]   
-
-            gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
+            if "gs_create" in request.POST:
+                gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
 
             report_log = {
                 'date': datetime.now().date(),
@@ -221,8 +227,7 @@ def vv_events_visits_report(request):
                 'bonus_rate': 50,
                 'report_type': 'event',
             }
-        else:
-            gs_link = ''
+        else:            
             message = 'Нет данных для добавления в очёт'
             report_log = {
                 'date': datetime.now().date(),
