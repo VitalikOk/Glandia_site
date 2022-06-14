@@ -9,11 +9,13 @@
     <div>
         <h3><a href="{{ gs_link }}">Отчёт о посещениях акций c {{ start_date }} - {{ message }}</a>            
         <br>{{ date }}
-        <br>Количество участников {{ memb_count }}
+        <br>Количество участников {{ memb_count }} (уникальность место-участник)
         <br>Количество бонусов {{ bonus_count }}</h3>
         <br><br>
         <h3><br>Истёк срок абонимента</h3>
         {{ expire|safe }}        
+        <br><br>
+        {{ data_event|safe }}
         <br><br>
         {{ vv_rep_events|safe }}
         <br><br>

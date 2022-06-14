@@ -3,7 +3,7 @@ import general.main_func as mf
 import pandas as pd
 from ast import Str
 import general.db_func as dbf
-from general.models import Users, Contacts, SentReportsVV, EventsVisits
+from general.models import Users, Contacts, SentReportsVV, EventsVisits, CollectionPoints
 from django.db.models import Q
 from datetime import datetime
 
@@ -47,6 +47,7 @@ def add_bonus_to_team(b_role, bonus_num):
                                             .values())
                                             )
     team = team[['gid','vvcard', 'expire']]
+    team['note'] = 'Волонтёрство'
     team['count'] = int(bonus_num)
     return team
 
@@ -56,10 +57,10 @@ def get_team_bonus(start_day=1):
     team = {1: 3, #'Сотрудник'
             2: 1, #'волонтер'
                  #'Регулярный посетитель'
-            'G73': 15,
+            'G73': 12,
             'G101': 3, 
             'G93': 2,
-            'G2': 15
+            'G2': 12
             }
     for rol in team:
         team_bonus = pd.concat([team_bonus, add_bonus_to_team(rol, team[rol])])
@@ -189,13 +190,18 @@ def vv_events_visits_report(request):
         
         vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
         gs_link = ''
+        data_event = ''
+        memb_count = 0
+        bonus_count = 0
+        all_points_data = pd.DataFrame()
+
         if len(vv_rep_events):
             vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
-            vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire']] 
-            vv_rep_events.drop_duplicates(inplace=True)
+            vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire', 'note']] 
+            vv_rep_events.drop_duplicates(subset=['date','vvcard','gid']  ,inplace=True)
 
             if vv_rep_events is not None and len(vv_rep_events):
-                vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire']).count()
+                vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire', 'note']).count()
                                 .rename(columns={'date': 'count'})
                                 .sort_values(by='count', ascending=False)
                                 .reset_index(drop=False)
@@ -207,24 +213,67 @@ def vv_events_visits_report(request):
 
             vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
             vv_rep_events['count'] = vv_rep_events['count'].astype('int')
-            vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire']).sum()
+            vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire','note']).sum()
                             .rename(columns={'date': 'count'})
                             .sort_values(by='count', ascending=False)
                             .reset_index(drop=False)
                             )
-            vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{6,8}'))]   
-            vv_rep_events = vv_rep_events[vv_rep_events['gid'] != 0]   
-            vv_rep_events['expire'] =  pd.to_datetime(vv_rep_events['expire'], format='%d.%m.%Y').dt.date
-            expire = vv_rep_events[(vv_rep_events['expire'] < datetime.now().date())]   
-            vv_rep_events = vv_rep_events[(vv_rep_events['expire'] >= datetime.now().date())]   
+            vv_rep_events = vv_rep_events[(vv_rep_events['vvcard'].str.fullmatch(r'.{7}'))]   
+            vv_rep_events['expire'] =  pd.to_datetime(vv_rep_events['expire'], format='%d.%m.%Y', errors='coerce').dt.date
+
+            expire = vv_rep_events[(vv_rep_events['gid'] != 0) & (vv_rep_events['expire'] < datetime.now().date())]   
+
+            points = pd.DataFrame(list(CollectionPoints.objects.all().order_by('id').values()))
+
+
+            for ind, point in points.iterrows():
+                data_event += (f"<H2>Точка сбора: {point['name']}</H2><br>"
+                              + f"Для участников ЧП {point['accrual_restrict']} раз в неделю {point['cost_by_visit']} Бонусов<br>" 
+                              + f"Для остальных {point['accrual_restrict_nonmember']} раз в неделю {point['cost_by_nonmember']} Бонусов<br>"
+                )
+
+                point_data = vv_rep_events[vv_rep_events['note'].str.contains(point['name'])]
+                
+
+                def get_bonus_sum(row):
+                    if row['gid'] !=0 and row['expire'] >= datetime.now().date():
+                        cost = point['cost_by_visit'] 
+                        restrict = point['accrual_restrict'] 
+                    else:
+                        cost = point['cost_by_nonmember']
+                        restrict = point['accrual_restrict_nonmember']      
+
+                    if row['count'] > restrict:
+                        visits = restrict
+                    else:
+                        visits = row['count'] 
+
+                    return visits * cost
+
+
+                if len(point_data):
+                    point_data['bonus'] = point_data.apply(get_bonus_sum, axis=1) 
+                    all_points_data = pd.concat([all_points_data, point_data])
+                    data_sum = point_data['bonus'].sum()
+                    data_count = point_data['bonus'].count()
+                    data_event += mf.disply_table_html(point_data)
+                    memb_count += data_count
+                    bonus_count += data_sum
+                    data_event += f"<br> Итого {data_sum} бонусов для {data_count} участников"                            
+
             if "gs_create" in request.POST:
-                gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, vv_rep_events[['vvcard', 'count']])
+                all_points_data = all_points_data[['vvcard','bonus']].groupby(['vvcard']).sum()
+                all_points_data.reset_index(drop=False, inplace=True)
+                all_points_data.sort_values(by='bonus', ascending=False, inplace=True)
+                gs_data_disp = mf.disply_table_html(all_points_data)
+                gs_data_disp += f"<br> Итого {all_points_data['bonus'].sum()} бонусов для {all_points_data['bonus'].count()} участников"                            
+                gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, all_points_data)
 
             report_log = {
                 'date': datetime.now().date(),
-                'memb_count': len(vv_rep_events),
-                'bonus_count': vv_rep_events['count'].sum(),
-                'bonus_rate': 50,
+                'memb_count': memb_count,
+                'bonus_count': bonus_count,
+                'bonus_rate': 1,
                 'report_type': 'event',
             }
         else:            
@@ -243,7 +292,8 @@ def vv_events_visits_report(request):
             'date': report_log['date'],
             'memb_count': report_log['memb_count'],
             'bonus_count': report_log['bonus_count'],
-            'vv_rep_events': mf.disply_table_html(vv_rep_events),
+            'data_event': data_event,
+            'vv_rep_events': gs_data_disp,
             'expire': mf.disply_table_html(expire),
             'message': message,
             'gs_link': gs_link,
