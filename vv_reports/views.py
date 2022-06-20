@@ -6,6 +6,7 @@ import general.db_func as dbf
 from general.models import Users, Contacts, SentReportsVV, EventsVisits, CollectionPoints
 from django.db.models import Q
 from datetime import datetime
+from datetime import timedelta
 
 def vvrep_to_gs(file_name, data):
     g_sheets = mf.get_google_sheet()
@@ -113,7 +114,10 @@ def correct_all_vvcards():
 
 
 def vv_reports_menu(request):
-    return render(request, "vv_reports/vv_reports_menu.html")
+    context = {
+        'today': datetime.now().date().strftime("%Y-%m-%d")
+            }
+    return render(request, "vv_reports/vv_reports_menu.html", context)
 
 
 def vv_cards_correct(request):
@@ -187,8 +191,17 @@ def vv_events_visits_report(request):
                                 .order_by('date').last()
                                 .date
                             )
-        
-        vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date).values()))    
+        start_date = request.POST['start_date']
+        end_date = datetime.strptime(request.POST['end_date'], "%Y-%m-%d")
+        end_date += timedelta(days=1)
+        vv_rep_events = pd.DataFrame(list(EventsVisits.objects.filter(date_time__gte=start_date, 
+                                                                      date_time__lte=end_date).values()))    
+
+        if "report_data" in request.POST:
+            report_data = mf.disply_table_html(vv_rep_events)
+        else:
+            report_data = ''
+
         gs_link = ''
         data_event = ''
         memb_count = 0
@@ -261,6 +274,7 @@ def vv_events_visits_report(request):
                     bonus_count += data_sum
                     data_event += f"<br> Итого {data_sum} бонусов для {data_count} участников"                            
 
+            gs_data_disp = f'Создание отчёта в Google таблице отключено'
             if "gs_create" in request.POST:
                 all_points_data = all_points_data[['vvcard','bonus']].groupby(['vvcard']).sum()
                 all_points_data.reset_index(drop=False, inplace=True)
@@ -289,6 +303,7 @@ def vv_events_visits_report(request):
         
         context = {
             'start_date': start_date,
+            'report_data': report_data,
             'date': report_log['date'],
             'memb_count': report_log['memb_count'],
             'bonus_count': report_log['bonus_count'],
