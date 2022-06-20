@@ -216,7 +216,7 @@ def events_visits_import(request):
     g_sheets = mf.get_google_sheet()
     last_date = get_last_date()
     # last_date = mf.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S')
-
+    mf.write_log('api_import.log',f'Got last date {last_date}')
     # Импорт данных об участниках введйнных вручную
     def add_manual_imput(month, data_events, g_sheets):
         ma_sheets, rows = mf.get_all_values_sheets(mf.MANUAL_ADD_SHEET + month, g_sheets)
@@ -239,6 +239,7 @@ def events_visits_import(request):
         if last_date.strftime("%m") < mf.MONTH:
             data_events = add_manual_imput(mf.PREV_MONTH, data_events, g_sheets)
         data_events = add_manual_imput(mf.MONTH, data_events, g_sheets)
+        mf.write_log('api_import.log',f'Add manual import {len(data_events)} records')
 
     # Импорт данных о посещениях из API app.waveservice.ru
     # api.waveservice.ru/public/v1/docs#/
@@ -246,21 +247,23 @@ def events_visits_import(request):
         start_date = last_date
         len_rep = 100
         while len_rep == 100:
-            ws_json = get_waveservice_api(created_from=last_date)
+            ws_json = get_waveservice_api(created_from=start_date)
             if len(ws_json['items']) > 0:
                 report = ws_report_topd(ws_json, action_type='Получить бонусы')
                 len_rep = len(ws_json['items'])
                 start_date = str(pd.to_datetime(report.iloc[-1]['date'])
                                  - pd.DateOffset(hours=3, seconds=59)
-                                 )
+                                 )                               
                 report = fill_data(report)
+                mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date} len report after fill {len(report)}')                                  
                 data_events = pd.concat([data_events,
                                          report[EV_COLUMNS]],
                                         ignore_index=True
                                         )
                 no_members = data_events[data_events['gid'] == 0]
+                mf.write_log('api_import.log',f'Add qr_form_ws_import_api {len(data_events)} records')
             else:
-                print(f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
+                mf.write_log('api_import.log',f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
                 break
 
     # Импорт данных о посещениях сканирование qr из
@@ -270,12 +273,13 @@ def events_visits_import(request):
         len_rep = 100
         while len_rep == 100:
             ws_json = get_waveservice_api(created_from=start_date, d_type='check_ins')
-            if len(ws_json['data']) > 0:
+            if len(ws_json['data']) > 0:                
                 report = ws_report_topd(ws_json, d_type='check_ins')                
                 len_rep = len(report)
                 start_date = str(pd.to_datetime(report.iloc[-1]['date'])
                                  - pd.DateOffset(hours=3, seconds=59)
                                  )
+                mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date}')                                 
                 report = fill_data(report)
                 report['event'] = 'Мобильная станци'
                 data_events = pd.concat([data_events,
@@ -283,9 +287,9 @@ def events_visits_import(request):
                                         ignore_index=True
                                         )
                 data_events = fill_data(data_events)
-
-            else:
-                print(f'Нет данных о check_ins из API app.waveservice.ru c {last_date}')
+                mf.write_log('api_import.log',f'Add scan_qr_from_ws_api {len(data_events)} records')
+            else:                
+                mf.write_log('api_import.log',f'Нет данных о check_ins из API app.waveservice.ru c {last_date}')
                 break
 
     # ===================Обработка данных====================
@@ -300,6 +304,7 @@ def events_visits_import(request):
         # добавление данных в таблицу
         for ind, row in data_events.iterrows():
             dbf.add_visit(row)
+        mf.write_log('api_import.log',f'Imported to db {len(data_events)} records')
 
     context = {
         'message': 'Отчёт о посещениях сформирован',

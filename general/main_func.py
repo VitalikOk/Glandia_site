@@ -442,3 +442,8 @@ def add_months_for_date(date, m):
     if day > num_days[month]:
         day = num_days[month]
     return dt_date(year, month, day)
+
+
+def write_log(log_name, log_text):
+    with open(LOG_PATH + log_name, 'a') as lf:
+        lf.write(log_text+'\n')
