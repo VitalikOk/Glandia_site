@@ -39,8 +39,11 @@ urlpatterns =[
     path("events_visits_menu/", events_visits.events_visits_menu),
     path("events_visits_import/", events_visits.events_visits_import),
     path('adduser/', usercreation.adduserform),
-    path('addition_result/', usercreation.results)
+    path('addition_result/', usercreation.results),
+    path('event_add_form/', events_visits.event_add_form),
+    path('add_event/', events_visits.add_event)   
 ]
+    
 # включаем возможность обработки картинок
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

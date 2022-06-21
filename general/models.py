@@ -25,16 +25,7 @@ class Contacts(models.Model):
     gid = models.IntegerField(verbose_name = "идентификатор", unique=True, null=True)
     name = models.CharField(verbose_name="имя", max_length=64)    
     phone = models.CharField(verbose_name="номер телефона", max_length=64, default=' - ')
-    elmail = models.EmailField(verbose_name="элетронная почта")      
-
-
-class EventsVisits(models.Model):
-    date_time = models.DateTimeField(verbose_name="дата посещения")
-    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
-    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
-    note = models.TextField(verbose_name="заметка", blank=True)    
-    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
-
+    elmail = models.EmailField(verbose_name="элетронная почта")  
 
 class SentReportsVV(models.Model):
     date = models.DateField(verbose_name="дата отправки")
@@ -67,3 +58,13 @@ class CollectionPoints(models.Model):
     cost_by_visit=models.IntegerField(verbose_name='стоимость посещения', default=0)
     accrual_restrict_nonmember=models.IntegerField(verbose_name='ограничение для не участников клуба 1-7', choices=ACCURAL_RESTRICT_CHOICES, default=1)
     cost_by_nonmember=models.IntegerField(verbose_name='стоимость посещения не участником', default=0)
+
+
+class EventsVisits(models.Model):
+    date_time = models.DateTimeField(verbose_name="дата посещения")
+    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
+    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
+    note = models.TextField(verbose_name="заметка", blank=True)    
+    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
+    # collection_point = models.ForeignKey(CollectionPoints, on_delete=models.CASCADE, default=0)
+    collection_point = models.CharField(verbose_name="пункт сбора", max_length=64, default="пункт сбора")

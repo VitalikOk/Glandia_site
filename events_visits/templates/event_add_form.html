@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+    
+        <div class="container">
+            <form action="/add_event/" method="post">{% csrf_token %}
+
+                <H1>Посещения акций</H1>
+
+                <div>
+                    <h2>Дата посещения</h2>
+                    <input type="text" name="date_time">
+                    <h2>G-id</h2>
+                    <input type="text" name="gid">
+                    <h2>Дата истечения на момент акции</h2>
+                    <input type="text" name="expire">
+                    <h2>Заметка</h2>
+                    <input type="text" name="note">
+                    <h2>Номер карты ВВ на момент акции</h2>
+                    <input type="text" name="vvcard">
+                    <h2>Пункт приёма</h2>
+                    <select name="collection_point" id="">  
+                        {% for point in points %}
+                            <option>{{ point.name }}</option>
+                        {% endfor %}
+                    </select>
+                    <br>
+                    <br>
+                    <input type="submit" value="Добавить">
+                  
+                </div>
+            </form>
+
+        </div>        
+   
+</body>
+</html>
+
+
+<!-- date_time = models.DateTimeField(verbose_name="дата посещения")
+    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
+    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
+    note = models.TextField(verbose_name="заметка", blank=True)    
+    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ") -->

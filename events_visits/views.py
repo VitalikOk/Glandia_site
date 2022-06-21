@@ -2,7 +2,7 @@ from django.shortcuts import render
 import general.main_func as mf
 import pandas as pd
 import general.db_func as dbf
-from general.models import Users, Contacts, EventsVisits
+from general.models import Users, Contacts, EventsVisits, CollectionPoints
 from django.db.models import Q
 
 EV_COLUMNS = mf.ev_columns + ['gid', 'vv_card']
@@ -318,3 +318,41 @@ def events_visits_import(request):
 
 # def contact(request):
 #     return render(request, "general/contact.html")
+
+
+def event_add_form(request):
+    points = CollectionPoints.objects.all()
+    context = {'points': points}
+    return render(request, "event_add_form.html", context)
+
+def add_event(request):
+    if request.method == "POST":
+        event, created = EventsVisits.objects.get_or_create(
+            date_time = request.POST['date_time'],
+            expire = request.POST['expire'],
+            note = request.POST['note'],
+            vvcard = request.POST['vvcard'],
+            collection_point = request.POST['collection_point']            
+        )
+        
+        if created:
+            message = 'Запись события создана'
+        else:
+            message = 'Ошибка при создании записи'        
+
+        context = {
+            'message': message
+        }
+
+    return render(request, "event_add_result.html", context)
+
+
+    '''
+    
+    <!-- date_time = models.DateTimeField(verbose_name="дата посещения")
+    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
+    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
+    note = models.TextField(verbose_name="заметка", blank=True)    
+    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ") -->
+    
+    '''
