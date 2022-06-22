@@ -20,16 +20,14 @@
                     <input type="text" name="gid">
                     <h2>Дата истечения на момент акции</h2>
                     <input type="text" name="expire">
-                    <h2>Заметка</h2>
-                    <input type="text" name="note">
-                    <h2>Номер карты ВВ на момент акции</h2>
-                    <input type="text" name="vvcard">
-                    <h2>Пункт приёма</h2>
-                    <select name="collection_point" id="">  
+                    <h2>Заметка (Пункт приёма)</h2>
+                    <select name="note" id="">  
                         {% for point in points %}
                             <option>{{ point.name }}</option>
                         {% endfor %}
                     </select>
+                    <h2>Номер карты ВВ на момент акции</h2>
+                    <input type="text" name="vvcard">                 
                     <br>
                     <br>
                     <input type="submit" value="Добавить">

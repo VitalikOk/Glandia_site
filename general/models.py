@@ -66,5 +66,3 @@ class EventsVisits(models.Model):
     expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
     note = models.TextField(verbose_name="заметка", blank=True)    
     vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
-    # collection_point = models.ForeignKey(CollectionPoints, on_delete=models.CASCADE, default=0)
-    collection_point = models.CharField(verbose_name="пункт сбора", max_length=64, default="пункт сбора")

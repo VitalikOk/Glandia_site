@@ -331,8 +331,7 @@ def add_event(request):
             date_time = request.POST['date_time'],
             expire = request.POST['expire'],
             note = request.POST['note'],
-            vvcard = request.POST['vvcard'],
-            collection_point = request.POST['collection_point']            
+            vvcard = request.POST['vvcard']                    
         )
         
         if created:
