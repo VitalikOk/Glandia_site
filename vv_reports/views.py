@@ -204,6 +204,7 @@ def vv_events_visits_report(request):
 
         gs_link = ''
         data_event = ''
+        expire_data = ''
         memb_count = 0
         bonus_count = 0
         all_points_data = pd.DataFrame()
@@ -298,8 +299,11 @@ def vv_events_visits_report(request):
                 'bonus_count': 0,
             }
 
-        if "add_rep_in_db" in request.POST: 
+        if 'add_rep_in_db' in request.POST: 
             dbf.add_sent_report_vv(report_log)
+        if 'expire_data' in request.POST: 
+            expire_data = '<br><h3>Истёк срок абонимента</h3><br>'
+            expire_data += mf.disply_table_html(expire)
         
         context = {
             'start_date': start_date,
@@ -309,7 +313,7 @@ def vv_events_visits_report(request):
             'bonus_count': report_log['bonus_count'],
             'data_event': data_event,
             'vv_rep_events': gs_data_disp,
-            'expire': mf.disply_table_html(expire),
+            'expire': expire_data,
             'message': message,
             'gs_link': gs_link,
         }
