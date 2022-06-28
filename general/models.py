@@ -66,3 +66,4 @@ class EventsVisits(models.Model):
     expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
     note = models.TextField(verbose_name="заметка", blank=True)    
     vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ")
+    special_amount = models.IntegerField(verbose_name="Специальная сумма для зачтсления бонусов", default=0)

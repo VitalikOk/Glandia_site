@@ -4,6 +4,7 @@ import pandas as pd
 import general.db_func as dbf
 from general.models import Users, Contacts, EventsVisits, CollectionPoints
 from django.db.models import Q
+from datetime import datetime
 
 EV_COLUMNS = mf.ev_columns + ['gid', 'vv_card']
 EV_COLUMNS_BD = ['date', 'gid', 'expire', 'event', 'vv_card']
@@ -322,16 +323,48 @@ def events_visits_import(request):
 
 def event_add_form(request):
     points = CollectionPoints.objects.all()
-    context = {'points': points}
+
+    if request.method == "POST" and (request.POST['vvcard'] != '' or gid != 0) :
+        if request.POST['gid'] == '':
+            gid = 0
+        else:
+            gid = request.POST['gid']
+        user_data = pd.Series(list(Users.objects.filter(Q(gid=gid) | Q(vvcard=request.POST['vvcard'])).values()))
+        if len(user_data) > 0:
+            user_data = user_data[0]
+            context = {'points': points,
+                    'today':  request.POST['date_time'],
+                    'gid': user_data['gid'],
+                    'expire': datetime.strptime(user_data['expire'], "%d.%m.%Y").strftime("%Y-%m-%d"),
+                    'vvcard': user_data['vvcard'],                
+                    }
+        else:
+            context = {'points': points,
+                    'today':  request.POST['date_time'],
+                    'gid': request.POST['gid'],
+                    'expire': request.POST['expire'],
+                    'vvcard': request.POST['vvcard'],                
+                    }
+    else:
+        context = {
+                   'points': points,
+                   'today':  datetime.now().date().strftime("%Y-%m-%d")
+                   }
     return render(request, "event_add_form.html", context)
 
 def add_event(request):
     if request.method == "POST":
+        if request.POST['amount'] == '':
+            amount = 0
+        else:
+            amount = request.POST['amount']
         event, created = EventsVisits.objects.get_or_create(
             date_time = request.POST['date_time'],
-            expire = request.POST['expire'],
+            gid = request.POST['gid'],
+            expire = datetime.strptime(request.POST['expire'], "%Y-%m-%d").strftime("%d.%m.%Y"),
             note = request.POST['note'],
-            vvcard = request.POST['vvcard']                    
+            vvcard = request.POST['vvcard'],
+            special_amount = amount,
         )
         
         if created:

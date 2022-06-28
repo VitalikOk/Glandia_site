@@ -15,22 +15,26 @@
 
                 <div>
                     <h2>Дата посещения</h2>
-                    <input type="text" name="date_time">
-                    <h2>G-id</h2>
-                    <input type="text" name="gid">
-                    <h2>Дата истечения на момент акции</h2>
-                    <input type="text" name="expire">
+                    <input type="date" name="date_time" value="{{ today }}">
                     <h2>Заметка (Пункт приёма)</h2>
                     <select name="note" id="">  
                         {% for point in points %}
                             <option>{{ point.name }}</option>
                         {% endfor %}
                     </select>
+                    <h2>G-id</h2>
+                    <input type="number" name="gid" value="{{ gid }}">
                     <h2>Номер карты ВВ на момент акции</h2>
-                    <input type="text" name="vvcard">                 
+                    <input type="text" name="vvcard" value="{{ vvcard }}"> 
+                    <br><br>
+                    <button type="submit" formaction="/event_add_form/">Получить данные</button>  
+                    <h2>Дата истечения на момент акции</h2>
+                    <input type="date" name="expire" value="{{ expire }}">   
+                    <h2>Количнство бонусов</h2>
+                    <input type="number" name="amount">        
                     <br>
                     <br>
-                    <input type="submit" value="Добавить">
+                    <button type="submit" formaction="/add_event/">Добавить</button>
                   
                 </div>
             </form>
