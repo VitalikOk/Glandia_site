@@ -2,6 +2,7 @@ from django.shortcuts import render
 from general.models import Roles, Users, Contacts
 import general.db_func as dbf
 from datetime import datetime
+import general.main_func as mf
 
 def adduserform(request):
     allroles = Roles.objects.all()   
@@ -39,7 +40,7 @@ def results(request):
             'vv_card': data['vvcard'],
             'name': data['name'],
             'email': data['email'],
-            'phone': data['phone']
+            'phone': mf.correct_phone_number(data['phone'])
         }
 
         unique_user = {'email': True, 'phone': True, 'vvcard': True}

@@ -358,10 +358,18 @@ def add_event(request):
             amount = 0
         else:
             amount = request.POST['amount']
+
+        if request.POST['expire'] != '':
+            expire_date = datetime.strptime(request.POST['expire'], "%Y-%m-%d").strftime("%d.%m.%Y")
+        else:
+            expire_date = 'Срок действия не указано'
+
+
+
         event, created = EventsVisits.objects.get_or_create(
             date_time = request.POST['date_time'],
             gid = request.POST['gid'],
-            expire = datetime.strptime(request.POST['expire'], "%Y-%m-%d").strftime("%d.%m.%Y"),
+            expire = expire_date,
             note = request.POST['note'],
             vvcard = request.POST['vvcard'],
             special_amount = amount,

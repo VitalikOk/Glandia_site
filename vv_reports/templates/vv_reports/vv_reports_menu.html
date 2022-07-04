@@ -22,6 +22,9 @@
                 -->
                 <br><br>
                 <form method="post">{% csrf_token %}
+                    <label for="end_date_to_subscribe">Компенсация абониментво вступивших до: </label><br>
+                    <input type="date" id="end_date_to_subscribe" name="end_date_to_subscribe" value="2022-05-31">
+                    <br><br>
                     <button type="submit" formaction="../vv_all_members_report/">Отчёт - Месячный отчёт о членах клуба</button>
                     <br><br>
                     <label for="start_date">С даты:</label>
@@ -42,6 +45,9 @@
                     <br><br>
                     <label for="expire_data">Показать участников с истёкшими абониментами</label>
                     <input type="checkbox" id="expire_data" name="expire_data">
+                    <br><br>
+                    <label for="gs_data">Показать даннве для передачи в Google Таблицу</label>
+                    <input type="checkbox" id="gs_data" name="gs_data">
                 </form>
             </div>
     </div>

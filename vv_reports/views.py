@@ -7,7 +7,8 @@ from general.models import Users, Contacts, SentReportsVV, EventsVisits, Collect
 from django.db.models import Q
 from datetime import datetime
 from datetime import timedelta
-
+from datetime import date
+    
 def vvrep_to_gs(file_name, data):
     g_sheets = mf.get_google_sheet()
     try:
@@ -142,9 +143,11 @@ def vv_all_members_report(request):
     # VV_MEMBERS_REPORT
     if request.method == 'POST':
         message = 'Cформирован'
-        
-        vv_rep_members = pd.DataFrame(list(Users.objects.filter(~Q(vvcard='НЕТ КАРТЫ'))
-                                                        .order_by('date_in').values()))  
+        end_date = datetime.strptime(request.POST['end_date_to_subscribe'], "%Y-%m-%d")
+        end_date += timedelta(days=1)
+        today = datetime.now().date
+        vv_rep_members = pd.DataFrame(list(Users.objects.filter(Q(date_in__lte=end_date) & Q(expire__lte=today) & ~Q(vvcard='НЕТ КАРТЫ'))
+                                                        .order_by('date_in').values())) 
 
         gs_link =''
         if len(vv_rep_members):
@@ -208,13 +211,20 @@ def vv_events_visits_report(request):
         memb_count = 0
         bonus_count = 0
         all_points_data = pd.DataFrame()
+        spec_amount = ''
 
         if len(vv_rep_events):
             vv_rep_events['date'] = vv_rep_events['date_time'].dt.date
-            vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire', 'note']] 
-            vv_rep_events.drop_duplicates(subset=['date','vvcard','gid']  ,inplace=True)
+            vv_rep_events = vv_rep_events[['date','vvcard','gid', 'expire', 'note', 'special_amount']] 
+            vv_rep_events.drop_duplicates(subset=['date','vvcard','gid', 'note', 'special_amount']  ,inplace=True)
 
             if vv_rep_events is not None and len(vv_rep_events):
+                vv_rep_events_spec = vv_rep_events[vv_rep_events['special_amount'] != 0]
+                vv_rep_events_spec['bonus'] = vv_rep_events_spec['special_amount']
+                vv_rep_events_spec.drop('special_amount', axis=1, inplace=True)
+                vv_rep_events_spec['expire'] =  pd.to_datetime(vv_rep_events_spec['expire'], format='%d.%m.%Y', errors='coerce').dt.date
+                vv_rep_events = vv_rep_events[vv_rep_events['special_amount'] == 0]
+                vv_rep_events.drop('special_amount', axis=1, inplace=True)
                 vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire', 'note']).count()
                                 .rename(columns={'date': 'count'})
                                 .sort_values(by='count', ascending=False)
@@ -247,7 +257,7 @@ def vv_events_visits_report(request):
                 )
 
                 point_data = vv_rep_events[vv_rep_events['note'].str.contains(point['name'])]
-                
+                point_data_spec = vv_rep_events_spec[vv_rep_events_spec['note'].str.contains(point['name'])]
 
                 def get_bonus_sum(row):
                     if row['gid'] !=0 and row['expire'] >= datetime.now().date():
@@ -266,21 +276,35 @@ def vv_events_visits_report(request):
 
 
                 if len(point_data):
-                    point_data['bonus'] = point_data.apply(get_bonus_sum, axis=1) 
+                    point_data['bonus'] = point_data.apply(get_bonus_sum, axis=1)      
+                    if len(point_data_spec):
+                        point_data_spec['count'] = 1
+                        point_data_spec.fillna(value={'expire': date(2021, 1, 1)}, inplace=True)
+                        point_data = pd.concat([point_data, point_data_spec[point_data.columns]])                                                                        
+                        point_data = (point_data.groupby(['vvcard', 'gid', 'expire','note'])                                  
+                                                .agg({'count': 'sum', 'bonus': 'sum'})                            
+                            .sort_values(by='bonus', ascending=False)
+                            .reset_index(drop=False)
+                            )
                     all_points_data = pd.concat([all_points_data, point_data])
+                    point_data.reset_index(drop=True, inplace=True)
                     data_sum = point_data['bonus'].sum()
-                    data_count = point_data['bonus'].count()
+                    data_count = point_data['bonus'].count()                    
                     data_event += mf.disply_table_html(point_data)
                     memb_count += data_count
                     bonus_count += data_sum
-                    data_event += f"<br> Итого {data_sum} бонусов для {data_count} участников"                            
-
+                    data_event += f"<br> Итого {data_sum} бонусов для {data_count} участников"                                            
+            
+            all_points_data.reset_index(drop=True, inplace=True)
             gs_data_disp = f'Создание отчёта в Google таблице отключено'
             if "gs_create" in request.POST:
                 all_points_data = all_points_data[['vvcard','bonus']].groupby(['vvcard']).sum()
                 all_points_data.reset_index(drop=False, inplace=True)
                 all_points_data.sort_values(by='bonus', ascending=False, inplace=True)
-                gs_data_disp = mf.disply_table_html(all_points_data)
+                if 'gs_data' in request.POST:  
+                    gs_data_disp = mf.disply_table_html(all_points_data)
+                else:
+                    gs_data_disp = ''
                 gs_data_disp += f"<br> Итого {all_points_data['bonus'].sum()} бонусов для {all_points_data['bonus'].count()} участников"                            
                 gs_link = vvrep_to_gs(mf.VV_EVENTS_REPORT, all_points_data)
 
@@ -312,7 +336,7 @@ def vv_events_visits_report(request):
             'memb_count': report_log['memb_count'],
             'bonus_count': report_log['bonus_count'],
             'data_event': data_event,
-            'vv_rep_events': gs_data_disp,
+            'vv_rep_events': gs_data_disp,            
             'expire': expire_data,
             'message': message,
             'gs_link': gs_link,
