@@ -153,7 +153,12 @@ def attrs_normalise(data):
     attrs = {'phone': '', 'email': '', 'vv_card': ''}
     for attr in data:
         if attr['name'] == 'Номер карты ВкусВилл':
-            attrs['vv_card'] = attr['value'].replace('Карта', '').strip(' №').strip()
+            attrs['vv_card'] = (attr['value']
+                                .replace('Карта', '')
+                                .replace(' ', '')
+                                .replace('-', '')
+                                .strip(' №').strip()
+            )
         elif attr['name'] == 'Телефон':
             attrs['phone'] = attr['value']
         elif attr['name'] == 'Email':
@@ -386,13 +391,3 @@ def add_event(request):
 
     return render(request, "event_add_result.html", context)
 
-
-    '''
-    
-    <!-- date_time = models.DateTimeField(verbose_name="дата посещения")
-    gid = models.IntegerField(verbose_name = "идентификатор", null=True)
-    expire = models.CharField(verbose_name="дата истечения на момент акции", max_length=64, null=True) # input_formats=["%d-%m-%Y"]
-    note = models.TextField(verbose_name="заметка", blank=True)    
-    vvcard = models.CharField(verbose_name="номер карты ВВ на момент акции", max_length=64, default="НЕТ КАРТЫ") -->
-    
-    '''
