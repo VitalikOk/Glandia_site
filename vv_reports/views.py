@@ -256,8 +256,8 @@ def vv_events_visits_report(request):
                               + f"Для остальных {point['accrual_restrict_nonmember']} раз в неделю {point['cost_by_nonmember']} Бонусов<br>"
                 )
 
-                point_data = vv_rep_events[vv_rep_events['note'].str.contains(point['name'])]
-                point_data_spec = vv_rep_events_spec[vv_rep_events_spec['note'].str.contains(point['name'])]
+                point_data = vv_rep_events[(vv_rep_events['note'].str.contains(point['name'])) | (vv_rep_events['note'] == point['name'])]
+                point_data_spec = vv_rep_events_spec[(vv_rep_events_spec['note'].str.contains(point['name'])) | (vv_rep_events_spec['note'] == point['name'])]
 
                 def get_bonus_sum(row):
                     if row['gid'] !=0 and row['expire'] >= datetime.now().date():
@@ -277,10 +277,11 @@ def vv_events_visits_report(request):
 
                 if len(point_data):
                     point_data['bonus'] = point_data.apply(get_bonus_sum, axis=1)      
+                    point_data.fillna(value={'expire': date(2021, 1, 1)}, inplace=True)
                     if len(point_data_spec):
                         point_data_spec['count'] = 1
                         point_data_spec.fillna(value={'expire': date(2021, 1, 1)}, inplace=True)
-                        point_data = pd.concat([point_data, point_data_spec[point_data.columns]])                                                                        
+                        point_data = pd.concat([point_data, point_data_spec[point_data.columns]])        
                         point_data = (point_data.groupby(['vvcard', 'gid', 'expire','note'])                                  
                                                 .agg({'count': 'sum', 'bonus': 'sum'})                            
                             .sort_values(by='bonus', ascending=False)
