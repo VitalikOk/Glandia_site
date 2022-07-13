@@ -64,7 +64,7 @@ def get_role(member):
 
 
 def add_visit(visit):                  
-            ev_visit = EventsVisits.objects.create(
+            ev_visit = EventsVisits.objects.get_or_create(
                 date_time = visit['date'],
                 gid = visit['gid'],
                 expire = visit['expire'],

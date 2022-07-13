@@ -235,7 +235,8 @@ def vv_events_visits_report(request):
                 message = 'Нет данных о посещении акций'
 
 
-            vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
+            if "team_bonus" in request.POST:
+                vv_rep_events = pd.concat([vv_rep_events, get_team_bonus()])
             vv_rep_events['count'] = vv_rep_events['count'].astype('int')
             vv_rep_events = (vv_rep_events.groupby(['vvcard', 'gid', 'expire','note']).sum()
                             .rename(columns={'date': 'count'})

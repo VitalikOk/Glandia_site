@@ -5,6 +5,7 @@ import general.db_func as dbf
 from general.models import Users, Contacts, EventsVisits, CollectionPoints
 from django.db.models import Q
 from datetime import datetime
+from datetime import timedelta
 
 EV_COLUMNS = mf.ev_columns + ['gid', 'vv_card']
 EV_COLUMNS_BD = ['date', 'gid', 'expire', 'event', 'vv_card']
@@ -205,120 +206,104 @@ def get_last_date():
 
 
 def events_visits_menu(request):
-    return render(request, "events_visits_menu.html")
+    context = {
+            'today': datetime.now().date().strftime("%Y-%m-%d")
+            }
+    return render(request, "events_visits_menu.html", context)
 
 
 def events_visits_import(request):
-    # Импорт данных с акций
-    data_events = pd.DataFrame(columns=EV_COLUMNS)
-    no_members = pd.DataFrame(columns=EV_COLUMNS)
-    import_config = {
-        'manual_imput': True
-        , 'qr_form_ws_import_api': True
-        , 'scan_qr_from_ws_api': True
-        , 'export_to_bd': True
-    }
+    if request.method == 'POST':
+        # Импорт данных с акций
+        data_events = pd.DataFrame(columns=EV_COLUMNS)
+        no_members = pd.DataFrame(columns=EV_COLUMNS)
+        import_config = {
+            'qr_form_ws_import_api': True
+            , 'scan_qr_from_ws_api': True
+            , 'export_to_bd': True
+        }
 
-    g_sheets = mf.get_google_sheet()
-    last_date = get_last_date()
-    # last_date = mf.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S')
-    mf.write_log('api_import.log',f'Got last date {last_date}')
-    # Импорт данных об участниках введйнных вручную
-    def add_manual_imput(month, data_events, g_sheets):
-        ma_sheets, rows = mf.get_all_values_sheets(mf.MANUAL_ADD_SHEET + month, g_sheets)
-        if ma_sheets is not None and len(rows) > 1:
-            ma_bonus = mf.get_data_from_gs(ma_sheets, rows[1:]
-                                        , columns=rows[0]
-                                        , new_sheet=True)
-            ma_bonus['event'] = 'Бонус за вступление, ручной ввод'
-            # заполнение полей
-            ma_bonus = fill_data(ma_bonus)
-            # Добавления данных введйнных вручную к остальным
-            data_events = pd.concat([data_events, ma_bonus], ignore_index=True)
-        else:
-            print(f"Данные в таблтце \"{mf.MANUAL_ADD_SHEET + mf.MONTH}\" не найдены")
-        return data_events
+        g_sheets = mf.get_google_sheet()
+        last_date = get_last_date()
+        last_date = datetime.strptime(request.POST['start_date'], "%Y-%m-%d")
+        end_date = datetime.strptime(request.POST['end_date'], "%Y-%m-%d")
+        end_date += timedelta(days=1)
+        # last_date = mf.datetime.strptime(last_date, '%Y-%m-%d %H:%M:%S')
+        mf.write_log('api_import.log',f'Got last date {last_date}')
 
-    
 
-    if import_config['manual_imput']:
-        if last_date.strftime("%m") < mf.MONTH:
-            data_events = add_manual_imput(mf.PREV_MONTH, data_events, g_sheets)
-        data_events = add_manual_imput(mf.MONTH, data_events, g_sheets)
-        mf.write_log('api_import.log',f'Add manual import {len(data_events)} records')
+        # Импорт данных о посещениях из API app.waveservice.ru
+        # api.waveservice.ru/public/v1/docs#/
+        if import_config['qr_form_ws_import_api']:
+            start_date = last_date
+            len_rep = 100
+            while len_rep == 100:
+                ws_json = get_waveservice_api(created_from=start_date)
+                if len(ws_json['items']) > 0:
+                    report = ws_report_topd(ws_json, action_type='Получить бонусы')
+                    len_rep = len(ws_json['items'])
+                    start_date = str(pd.to_datetime(report.iloc[-1]['date'])
+                                    - pd.DateOffset(hours=3, seconds=59)
+                                    )                               
+                    report = fill_data(report)
+                    mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date} len report after fill {len(report)}')                                  
+                    data_events = pd.concat([data_events,
+                                            report[EV_COLUMNS]],
+                                            ignore_index=True
+                                            )
+                    no_members = data_events[data_events['gid'] == 0]
+                    mf.write_log('api_import.log',f'Add qr_form_ws_import_api {len(data_events)} records')
+                else:
+                    mf.write_log('api_import.log',f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
+                    break
 
-    # Импорт данных о посещениях из API app.waveservice.ru
-    # api.waveservice.ru/public/v1/docs#/
-    if import_config['qr_form_ws_import_api']:
-        start_date = last_date
-        len_rep = 100
-        while len_rep == 100:
-            ws_json = get_waveservice_api(created_from=start_date)
-            if len(ws_json['items']) > 0:
-                report = ws_report_topd(ws_json, action_type='Получить бонусы')
-                len_rep = len(ws_json['items'])
-                start_date = str(pd.to_datetime(report.iloc[-1]['date'])
-                                 - pd.DateOffset(hours=3, seconds=59)
-                                 )                               
-                report = fill_data(report)
-                mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date} len report after fill {len(report)}')                                  
-                data_events = pd.concat([data_events,
-                                         report[EV_COLUMNS]],
-                                        ignore_index=True
-                                        )
-                no_members = data_events[data_events['gid'] == 0]
-                mf.write_log('api_import.log',f'Add qr_form_ws_import_api {len(data_events)} records')
-            else:
-                mf.write_log('api_import.log',f'Нет данных о посещениях из API app.waveservice.ru c {last_date}')
-                break
+        # Импорт данных о посещениях сканирование qr из
+        # api.waveservice.ru/public/v1/docs#/
+        if import_config['scan_qr_from_ws_api']:
+            start_date = last_date
+            len_rep = 100
+            while len_rep == 100:
+                ws_json = get_waveservice_api(created_from=start_date, d_type='check_ins')
+                if len(ws_json['data']) > 0:                
+                    report = ws_report_topd(ws_json, d_type='check_ins')                
+                    len_rep = len(report)
+                    start_date = str(pd.to_datetime(report.iloc[-1]['date'])
+                                    - pd.DateOffset(hours=3, seconds=59)
+                                    )
+                    mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date}')                                 
+                    report = fill_data(report)
+                    report['event'] = 'Мобильная станци'
+                    data_events = pd.concat([data_events,
+                                            report[EV_COLUMNS]],
+                                            ignore_index=True
+                                            )
+                    data_events = fill_data(data_events)
+                    mf.write_log('api_import.log',f'Add scan_qr_from_ws_api {len(data_events)} records')
+                else:                
+                    mf.write_log('api_import.log',f'Нет данных о check_ins из API app.waveservice.ru c {last_date}')
+                    break
 
-    # Импорт данных о посещениях сканирование qr из
-    # api.waveservice.ru/public/v1/docs#/
-    if import_config['scan_qr_from_ws_api']:
-        start_date = last_date
-        len_rep = 100
-        while len_rep == 100:
-            ws_json = get_waveservice_api(created_from=start_date, d_type='check_ins')
-            if len(ws_json['data']) > 0:                
-                report = ws_report_topd(ws_json, d_type='check_ins')                
-                len_rep = len(report)
-                start_date = str(pd.to_datetime(report.iloc[-1]['date'])
-                                 - pd.DateOffset(hours=3, seconds=59)
-                                 )
-                mf.write_log('api_import.log',f'check_ins {len_rep} records last date {start_date}')                                 
-                report = fill_data(report)
-                report['event'] = 'Мобильная станци'
-                data_events = pd.concat([data_events,
-                                         report[EV_COLUMNS]],
-                                        ignore_index=True
-                                        )
-                data_events = fill_data(data_events)
-                mf.write_log('api_import.log',f'Add scan_qr_from_ws_api {len(data_events)} records')
-            else:                
-                mf.write_log('api_import.log',f'Нет данных о check_ins из API app.waveservice.ru c {last_date}')
-                break
+        # ===================Обработка данных====================
+        # сортировка и заполненин nan
+        data_events.sort_values(by='date', inplace=True)
+        data_events.reset_index(drop=True, inplace=True)
+        data_events['gid'] = data_events['gid'].astype('int')
+        # data_events.fillna('', inplace=True)
+        # data_events = data_events[data_events['gid'] != 0]
+        data_events = data_events[data_events['date'] < end_date]
+        if import_config['export_to_bd']:
+            # добавление данных в таблицу
+            for ind, row in data_events.iterrows():
+                dbf.add_visit(row)
+            mf.write_log('api_import.log',f'Imported to db {len(data_events)} records')
 
-    # ===================Обработка данных====================
-    # сортировка и заполненин nan
-    data_events.sort_values(by='date', inplace=True)
-    data_events.reset_index(drop=True, inplace=True)
-    data_events['gid'] = data_events['gid'].astype('int')
-    # data_events.fillna('', inplace=True)
-    # data_events = data_events[data_events['gid'] != 0]
-
-    if import_config['export_to_bd']:
-        # добавление данных в таблицу
-        for ind, row in data_events.iterrows():
-            dbf.add_visit(row)
-        mf.write_log('api_import.log',f'Imported to db {len(data_events)} records')
-
-    context = {
-        'message': 'Отчёт о посещениях сформирован',
-        'start_date': last_date,
-        'visits_num': len(data_events),
-        'no_members': mf.disply_table_html(no_members),
-        'members': mf.disply_table_html(data_events[EV_COLUMNS_BD]),
-    }
+        context = {
+            'message': 'Отчёт о посещениях сформирован',
+            'start_date': last_date,
+            'visits_num': len(data_events),
+            'no_members': mf.disply_table_html(no_members),
+            'members': mf.disply_table_html(data_events[EV_COLUMNS_BD]),
+        }
     return render(request, "events_visits_import.html", context)
 
 

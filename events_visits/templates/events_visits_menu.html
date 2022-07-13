@@ -6,11 +6,16 @@
 </head>
 <body>
  <H1>Посещения акций</H1>
-    <div>
-        <a href="../events_visits_import">Импорт QR кодов "Бонусы за акции" waveservice API</a>
-        <br>
-        <br>
-
+    <div>             
+        <form method="post">{% csrf_token %}  
+            <label for="start_date">С даты:</label>
+            <input type="date" id="start_date" name="start_date" value="{{ today }}">
+            <label for="end_date">по дату:</label>
+            <input type="date" id="end_date" name="end_date" value="{{ today }}">
+            <br><br>            
+            <button type="submit" formaction="../events_visits_import/">Импорт QR кодов "Бонусы за акции" waveservice API</button>
+            <br><br>
+        </form>
     </div>
 
 </body>
