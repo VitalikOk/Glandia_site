@@ -9,9 +9,9 @@
     <div>             
         <form method="post">{% csrf_token %}  
             <label for="start_date">С даты:</label>
-            <input type="date" id="start_date" name="start_date" value="{{ today }}">
+            <input type="date" id="start_date" name="start_date" value="{{ start_day }}">
             <label for="end_date">по дату:</label>
-            <input type="date" id="end_date" name="end_date" value="{{ today }}">
+            <input type="date" id="end_date" name="end_date" value="{{ end_day }}">
             <br><br>            
             <button type="submit" formaction="../events_visits_import/">Импорт QR кодов "Бонусы за акции" waveservice API</button>
             <br><br>

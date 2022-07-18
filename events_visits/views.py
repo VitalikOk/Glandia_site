@@ -206,8 +206,13 @@ def get_last_date():
 
 
 def events_visits_menu(request):
+    today = datetime.now().date()
+    idx = (today.weekday() + 1) % 7
+    end_day = today - timedelta(days=idx)
+    satrt_day = end_day - timedelta(days=6)
     context = {
-            'today': datetime.now().date().strftime("%Y-%m-%d")
+            'start_day': satrt_day.strftime("%Y-%m-%d"),
+            'end_day': end_day.strftime("%Y-%m-%d")
             }
     return render(request, "events_visits_menu.html", context)
 
