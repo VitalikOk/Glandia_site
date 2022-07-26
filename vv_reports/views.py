@@ -48,9 +48,10 @@ def add_bonus_to_team(b_role, bonus_num):
                                             .exclude(vvcard='НЕТ КАРТЫ')
                                             .values())
                                             )
-    team = team[['gid','vvcard', 'expire']]
-    team['note'] = 'Волонтёрство'
-    team['count'] = int(bonus_num)
+    if team is not None and len(team):
+        team = team[['gid','vvcard', 'expire']]
+        team['note'] = 'Волонтёрство'
+        team['count'] = int(bonus_num)
     return team
 
 
